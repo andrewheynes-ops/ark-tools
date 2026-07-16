@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARK PDF Extractor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ark-dark: #1a1a2e;
+      --ark-mid: #2d2d44;
+      --ark-accent: #4a9eff;
+      --ark-accent-hover: #2d85ff;
+      --ark-success: #22c55e;
+      --ark-warning: #f59e0b;
+      --ark-error: #ef4444;
+      --ark-text: #e8e8f0;
+      --ark-text-muted: #9999bb;
+      --ark-border: #3d3d5c;
+      --ark-surface: #252538;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--ark-dark);
+      color: var(--ark-text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    header {
+      background: var(--ark-mid);
+      border-bottom: 1px solid var(--ark-border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--ark-accent);
+    }
+
+    .logo span {
+      color: var(--ark-text-muted);
+      font-weight: 400;
+      font-size: 14px;
+      margin-left: 8px;
+      letter-spacing: 0;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: var(--ark-text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--ark-border);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--ark-surface);
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--ark-accent);
+      background: #1e1e35;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .drop-label {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .drop-hint {
+      font-size: 13px;
+      color: var(--ark-text-muted);
+    }
+
+    /* Progress */
+    .progress-wrap {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      color: var(--ark-text-muted);
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-bg {
+      background: var(--ark-border);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--ark-accent);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.2s;
+    }
+
+    /* File info */
+    .file-info {
+      display: none;
+      margin-top: 20px;
+      background: var(--ark-surface);
+      border: 1px solid var(--ark-border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .file-icon { font-size: 24px; }
+
+    .file-details { flex: 1; }
+    .file-name { font-size: 14px; font-weight: 600; }
+    .file-meta { font-size: 12px; color: var(--ark-text-muted); margin-top: 2px; }
+
+    .status-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+    .status-badge.processing { background: #1e3a5f; color: var(--ark-accent); }
+    .status-badge.done { background: #14532d; color: var(--ark-success); }
+    .status-badge.empty { background: #451a03; color: var(--ark-warning); }
+    .status-badge.error { background: #450a0a; color: var(--ark-error); }
+
+    /* Output */
+    .output-section {
+      display: none;
+      margin-top: 28px;
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .output-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .output-meta {
+      font-size: 12px;
+      color: var(--ark-text-muted);
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--ark-accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--ark-accent-hover); }
+
+    .btn-secondary {
+      background: var(--ark-surface);
+      color: var(--ark-text);
+      border: 1px solid var(--ark-border);
+    }
+    .btn-secondary:hover { background: var(--ark-mid); }
+
+    .btn-success {
+      background: #14532d;
+      color: var(--ark-success);
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--ark-surface);
+      border: 1px solid var(--ark-border);
+      border-radius: 10px;
+      color: var(--ark-text);
+      font-family: 'Menlo', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      min-height: 320px;
+      outline: none;
+    }
+
+    textarea:focus { border-color: var(--ark-accent); }
+
+    /* Warning for scanned */
+    .warning-box {
+      display: none;
+      background: #451a03;
+      border: 1px solid #92400e;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .warning-box strong { color: var(--ark-warning); }
+
+    /* Instructions */
+    .instructions {
+      margin-top: 40px;
+      border-top: 1px solid var(--ark-border);
+      padding-top: 28px;
+    }
+
+    .instructions h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--ark-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .step {
+      background: var(--ark-surface);
+      border: 1px solid var(--ark-border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .step-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ark-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .step-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ark-text);
+    }
+
+    .privacy-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--ark-text-muted);
+      line-height: 1.5;
+    }
+
+    .privacy-note strong { color: var(--ark-text); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--ark-success);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ARK <span>PDF Extractor</span></div>
+</header>
+
+<div class="container">
+  <h1>Extract text from a PDF</h1>
+  <p class="subtitle">Drop any provider PDF — shift notes, incident reports, communications exports, assessments — and get clean text Kevin can read. Nothing leaves your browser.</p>
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".pdf" />
+    <div class="drop-icon">📄</div>
+    <div class="drop-label">Drop PDF here or click to browse</div>
+    <div class="drop-hint">Supports Care Force exports, incident reports, assessments, service agreements</div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Reading PDF...</div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <div class="file-info" id="fileInfo">
+    <div class="file-icon">📄</div>
+    <div class="file-details">
+      <div class="file-name" id="fileName"></div>
+      <div class="file-meta" id="fileMeta"></div>
+    </div>
+    <div class="status-badge" id="statusBadge"></div>
+  </div>
+
+  <div class="warning-box" id="warningBox">
+    <strong>⚠️ Scanned PDF — no text layer found</strong><br>
+    This PDF contains images of pages rather than searchable text. MarkItDown and browser extraction cannot read it.<br><br>
+    <strong>Next step:</strong> Drop this PDF directly into a Claude conversation and ask Claude to extract the content. Claude reads scanned PDFs visually and will return the full text.
+  </div>
+
+  <div class="output-section" id="outputSection">
+    <div class="output-header">
+      <div>
+        <div class="output-title">Extracted text</div>
+        <div class="output-meta" id="outputMeta"></div>
+      </div>
+      <div class="output-actions">
+        <button class="btn-secondary" id="btnClear">Clear</button>
+        <button class="btn-primary" id="btnCopy">Copy all</button>
+      </div>
+    </div>
+    <textarea id="outputText" readonly placeholder="Extracted text will appear here..."></textarea>
+  </div>
+
+  <div class="instructions">
+    <h2>How to use</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">Step 1</div>
+        <div class="step-text">Drop the PDF from OneDrive or your Desktop — no copying needed</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 2</div>
+        <div class="step-text">Wait a few seconds while the text is extracted in your browser</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 3</div>
+        <div class="step-text">Click <strong>Copy all</strong>, then paste into the PDF Intake Template in Notion</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 4</div>
+        <div class="step-text">Mark extraction ✅ in the template — Kevin can now read it</div>
+      </div>
+    </div>
+    <p class="privacy-note">
+      <strong>Privacy:</strong> This tool runs entirely in your browser. No data is uploaded to any server. The PDF is read locally and never leaves your device.
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Copied to clipboard</div>
+
+<script>
+  // Configure PDF.js worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressBar = document.getElementById('progressBar');
+  const progressLabel = document.getElementById('progressLabel');
+  const fileInfo = document.getElementById('fileInfo');
+  const fileName = document.getElementById('fileName');
+  const fileMeta = document.getElementById('fileMeta');
+  const statusBadge = document.getElementById('statusBadge');
+  const warningBox = document.getElementById('warningBox');
+  const outputSection = document.getElementById('outputSection');
+  const outputText = document.getElementById('outputText');
+  const outputMeta = document.getElementById('outputMeta');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnClear = document.getElementById('btnClear');
+  const toast = document.getElementById('toast');
+
+  // Drag and drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') processFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) processFile(fileInput.files[0]);
+  });
+
+  async function processFile(file) {
+    // Reset UI
+    warningBox.style.display = 'none';
+    outputSection.style.display = 'none';
+    outputText.value = '';
+
+    // Show file info
+    fileInfo.style.display = 'flex';
+    fileName.textContent = file.name;
+    fileMeta.textContent = `${(file.size / 1024).toFixed(0)} KB`;
+    statusBadge.className = 'status-badge processing';
+    statusBadge.textContent = 'Reading…';
+
+    // Show progress
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressLabel.textContent = 'Loading PDF…';
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const totalPages = pdf.numPages;
+
+      progressLabel.textContent = `Extracting text from ${totalPages} page${totalPages > 1 ? 's' : ''}…`;
+
+      let fullText = '';
+      let totalChars = 0;
+
+      for (let i = 1; i <= totalPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
+        if (pageText) {
+          fullText += `--- Page ${i} ---\n${pageText}\n\n`;
+          totalChars += pageText.length;
+        }
+        progressBar.style.width = `${(i / totalPages) * 100}%`;
+      }
+
+      progressWrap.style.display = 'none';
+
+      if (!fullText.trim() || totalChars < 20) {
+        // Scanned PDF
+        statusBadge.className = 'status-badge empty';
+        statusBadge.textContent = 'Scanned — no text';
+        warningBox.style.display = 'block';
+      } else {
+        statusBadge.className = 'status-badge done';
+        statusBadge.textContent = '✓ Extracted';
+        outputText.value = fullText.trim();
+        outputMeta.textContent = `${totalPages} pages · ${totalChars.toLocaleString()} characters`;
+        outputSection.style.display = 'block';
+      }
+
+    } catch (err) {
+      progressWrap.style.display = 'none';
+      statusBadge.className = 'status-badge error';
+      statusBadge.textContent = 'Error';
+      fileMeta.textContent = 'Could not read this PDF — try dropping it into Claude instead';
+      console.error(err);
+    }
+  }
+
+  btnCopy.addEventListener('click', async () => {
+    if (!outputText.value) return;
+    await navigator.clipboard.writeText(outputText.value);
+    btnCopy.textContent = '✓ Copied';
+    btnCopy.className = 'btn-success';
+    toast.classList.add('show');
+    setTimeout(() => {
+      btnCopy.textContent = 'Copy all';
+      btnCopy.className = 'btn-primary';
+      toast.classList.remove('show');
+    }, 2000);
+  });
+
+  btnClear.addEventListener('click', () => {
+    outputSection.style.display = 'none';
+    warningBox.style.display = 'none';
+    fileInfo.style.display = 'none';
+    outputText.value = '';
+    fileInput.value = '';
+  });
+</script>
+</body>
+</html>
