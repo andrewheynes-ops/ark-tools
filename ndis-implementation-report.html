@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARK PlanIt — NDIS Support Coordinator Implementation Report Generator</title>
+<style>
+  :root{
+    --ark-navy:#1b2a4a;
+    --ark-teal:#2a7f7f;
+    --ark-light:#f4f7f9;
+    --ndis-purple:#6b2c91;
+    --line:#c9d2dc;
+    --text:#22303f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--ark-light);font-size:15px;line-height:1.45}
+
+  .toolbar{background:var(--ark-navy);color:#fff;padding:14px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;position:sticky;top:0;z-index:50}
+  .toolbar .brand{font-size:19px;font-weight:bold;letter-spacing:.5px;margin-right:auto}
+  .toolbar .brand span{color:#8fd6d6;font-weight:normal}
+  .toolbar button{background:var(--ark-teal);border:none;color:#fff;padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:bold}
+  .toolbar button.secondary{background:#3b4c6e}
+  .toolbar button:hover{filter:brightness(1.12)}
+
+  .wrap{max-width:960px;margin:0 auto;padding:22px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:20px}
+  .panel h2{margin:0 0 8px;font-size:16px;color:var(--ark-navy)}
+  .panel p.hint{margin:4px 0 10px;color:#5a6b7d;font-size:13px}
+  textarea.ctx{width:100%;min-height:150px;font-family:Consolas,Menlo,monospace;font-size:12.5px;border:1px solid var(--line);border-radius:5px;padding:10px;resize:vertical}
+  .paste-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .paste-actions button{background:var(--ark-navy);color:#fff;border:none;border-radius:5px;padding:8px 14px;cursor:pointer;font-weight:bold}
+  .paste-actions button.link{background:none;color:var(--ark-teal);text-decoration:underline;font-weight:normal;padding:8px 4px}
+  #parseMsg{font-size:13px}
+  #parseMsg.ok{color:#1c7a3d}
+  #parseMsg.err{color:#b3261e}
+  details.schema{margin-top:12px;font-size:13px}
+  details.schema pre{background:#f0f3f6;border:1px solid var(--line);border-radius:5px;padding:12px;overflow:auto;font-size:12px;max-height:340px}
+  .privacy-strip{background:#fff8e6;border:1px solid #e8d48a;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:20px}
+
+  .doc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:34px 40px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .ark-doc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:4px solid var(--ark-navy);padding-bottom:12px;margin-bottom:20px}
+  .ark-doc-head .org{font-size:22px;font-weight:bold;color:var(--ark-navy)}
+  .ark-doc-head .org small{display:block;font-size:12px;font-weight:normal;color:#5a6b7d;margin-top:2px}
+  .ark-doc-head .meta{text-align:right;font-size:12.5px;color:#5a6b7d}
+  h1.formtitle{font-size:24px;color:var(--text);border-bottom:1px solid var(--text);padding-bottom:8px;margin:6px 0 16px}
+  h2.sec{color:var(--ndis-purple);font-size:17px;margin:26px 0 8px}
+  h3.subsec{color:var(--ndis-purple);font-size:15px;margin:18px 0 6px}
+  .doc p, .doc li{font-size:13.5px}
+  .doc .guide{color:#3c4a59}
+  table.f{width:100%;border-collapse:collapse;margin:8px 0 14px}
+  table.f th, table.f td{border:1px solid #8d99a6;padding:7px 9px;font-size:13px;vertical-align:top;text-align:left}
+  table.f th{background:#efe9f4;font-weight:bold}
+  table.f td.lbl{background:#f4f6f8;width:34%;font-weight:bold}
+  table.f input[type=text], table.f input[type=date], table.f textarea, table.f select{
+    width:100%;border:1px dashed #b6c1cc;border-radius:3px;padding:5px 6px;font-family:inherit;font-size:13px;background:#fcfdff
+  }
+  table.f textarea{min-height:56px;resize:vertical}
+  .rowbtns{margin:-6px 0 14px}
+  .rowbtns button{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:5px 10px;font-size:12.5px;cursor:pointer;margin-right:6px}
+  .checklist{list-style:none;padding:0;margin:8px 0 14px}
+  .checklist li{margin:6px 0;font-size:13.5px;display:flex;gap:8px;align-items:flex-start}
+  .checklist input[type=checkbox]{width:16px;height:16px;margin-top:2px}
+  .cbline{font-size:13.5px;margin:6px 0}
+  .cbline label{margin-right:18px}
+  .cbline input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:5px}
+  .ark-doc-foot{border-top:2px solid var(--ark-navy);margin-top:26px;padding-top:10px;font-size:12px;color:#5a6b7d;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  @media print{
+    body{background:#fff;font-size:12.5px}
+    .toolbar,.panel,.privacy-strip,.rowbtns,.no-print{display:none !important}
+    .wrap{max-width:none;padding:0}
+    .doc{border:none;border-radius:0;box-shadow:none;padding:0}
+    table.f input, table.f textarea, table.f select{border:none;background:none;padding:2px 0;appearance:none;-webkit-appearance:none;resize:none}
+    table.f textarea{min-height:0}
+    h2.sec{break-after:avoid}
+    table.f{break-inside:avoid}
+    a{color:inherit;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <div class="brand">ARK PlanIt <span>| NDIS SC Implementation Report Generator</span></div>
+  <button class="secondary" onclick="clearAll()">Clear form</button>
+  <button class="secondary" onclick="downloadDoc()">Download .doc</button>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div class="wrap">
+
+  <div class="privacy-strip no-print">
+    <strong>Privacy:</strong> All data stays in this browser tab. Nothing is uploaded, saved, or sent anywhere.
+    Close or refresh the tab to clear everything. Store the finished report against the participant's record, not here.
+  </div>
+
+  <div class="panel no-print">
+    <h2>1 &middot; Paste participant context</h2>
+    <p class="hint">Paste the context block prepared in Notion (labelled-text format below, or JSON). Then select <strong>Parse &amp; populate</strong>. Every field stays editable afterwards — review before export.</p>
+    <textarea class="ctx" id="ctxInput" placeholder="=== ARK NDIS IMPLEMENTATION REPORT CONTEXT v1 ===&#10;Participant name: ...&#10;NDIS number: ...&#10;(paste the full block here)"></textarea>
+    <div class="paste-actions">
+      <button onclick="parseContext()">Parse &amp; populate</button>
+      <button class="link" onclick="copySchema()">Copy blank context schema</button>
+      <button class="link" onclick="copyKevinPrompt()">Copy Kevin prompt</button>
+      <span id="parseMsg"></span>
+    </div>
+    <details class="schema">
+      <summary>Context schema &amp; Kevin prompt (reference)</summary>
+      <pre id="schemaText">=== ARK NDIS IMPLEMENTATION REPORT CONTEXT v1 ===
+Report date: YYYY-MM-DD
+Participant name:
+NDIS number:
+Plan start date: YYYY-MM-DD
+Plan end date: YYYY-MM-DD
+Provider: ARK PlanIt
+Person completing this report:
+Phone number:
+Email address:
+Arrangement: New | Existing
+Date of initial contact:
+Agreed frequency of contact:
+Nominated contact:
+Primary contact method:
+Primary contact details:
+Secondary contact method:
+Secondary contact details:
+Other key contact:
+Other key contact details:
+
+[GOAL]
+Goal:
+Next steps:
+
+[REFERRAL FOR ASSESSMENT]
+Item:
+Actions taken:
+Barriers:
+Future actions:
+
+[PRIORITY SUPPORT]
+Support:
+Initial actions:
+Barriers:
+Future actions:
+
+[IMPLEMENTATION ACTIVITIES]
+Confirmed: all
+(or a comma list of numbers, e.g. Confirmed: 1,2,3,5,7
+ 1 Plan funding included in the participant's plan
+ 2 The different support categories and their flexibility
+ 3 Fund management and claiming
+ 4 Organising and planning supports over the life of the plan
+ 5 The role of community and mainstream supports
+ 6 How to access and use the my NDIS portal and app
+ 7 The value and importance of service agreements
+ 8 Listed supports - who can deliver them and how)
+
+[NOTES]
+(free text — only if any topics above could not be explained;
+ why, and alternative strategies)
+
+[CONFLICT OF INTEREST]
+Exists: No | Yes
+Discussed with participant: No | Yes
+
+[CONFLICT]
+Conflict:
+Management strategy:
+
+Notes:
+- Repeat [GOAL], [REFERRAL FOR ASSESSMENT], [PRIORITY SUPPORT]
+  and [CONFLICT] blocks as needed.
+- Only include [CONFLICT] blocks if conflicts exist.
+- Leave any unknown field blank rather than guessing.</pre>
+    </details>
+  </div>
+
+  <div class="panel no-print">
+    <h2>2 &middot; Review, edit, export</h2>
+    <p class="hint">Check every populated field against the participant record. Use <strong>Print / Save as PDF</strong> for portal upload (PDF preserves formatting in the my NDIS provider portal) or <strong>Download .doc</strong> if a Word copy is needed.</p>
+  </div>
+
+  <!-- ================= DOCUMENT ================= -->
+  <div class="doc" id="doc">
+
+    <div class="ark-doc-head">
+      <div class="org">ARK PlanIt<small>Support Coordination</small></div>
+      <div class="meta">
+        Report date: <input type="date" id="f_reportdate" style="border:1px dashed #b6c1cc;border-radius:3px;padding:3px 5px;font-size:12.5px"><br>
+        <span style="font-size:11.5px">Prepared using the official NDIS form structure<br>(Form — Support coordinator implementation report)</span>
+      </div>
+    </div>
+
+    <h1 class="formtitle">Support coordination &mdash; implementation report</h1>
+
+    <p class="guide">You can use this form to help the NDIA understand how the participant&rsquo;s new plan is going.</p>
+
+    <h2 class="sec">How to complete this form</h2>
+    <p class="guide">Complete this form if you are:</p>
+    <ul class="guide">
+      <li>a support coordinator</li>
+      <li>supporting the participant to implement their plan.</li>
+    </ul>
+    <p class="guide">You should:</p>
+    <ul class="guide">
+      <li>Fill out this form through discussions with the participant and the people who support them.</li>
+      <li>Support the participant to talk about their experiences and make sure they know what you are going to tell us in this form.</li>
+    </ul>
+    <p class="guide">Using this form helps you complete your reporting requirements as outlined in the Request for Service (RFS). When you complete this form, you give us information about:</p>
+    <ul class="guide">
+      <li>The participant&rsquo;s support needs and situation.</li>
+      <li>The participant&rsquo;s progress in implementing their plan to pursue their goals.</li>
+      <li>The supports the participant is receiving.</li>
+    </ul>
+
+    <h2 class="sec">How do I return this form to the NDIA?</h2>
+    <p class="guide">You can return this form to us by:</p>
+    <ul class="guide">
+      <li>Uploading through your my NDIS provider portal.</li>
+      <li>If you are unable to upload via the portal, then you may send an email with the report attached to enquiries@ndis.gov.au.</li>
+    </ul>
+
+    <h2 class="sec">Participant and plan details</h2>
+    <table class="f">
+      <tr><td class="lbl">Name:</td><td><input type="text" id="f_pname"></td></tr>
+      <tr><td class="lbl">NDIS Number:</td><td><input type="text" id="f_ndis"></td></tr>
+      <tr><td class="lbl">Plan Start Date:</td><td><input type="date" id="f_planstart"></td></tr>
+      <tr><td class="lbl">Plan End Date:</td><td><input type="date" id="f_planend"></td></tr>
+    </table>
+
+    <h2 class="sec">Provider details</h2>
+    <table class="f">
+      <tr><td class="lbl">Provider:</td><td><input type="text" id="f_provider" value="ARK PlanIt"></td></tr>
+      <tr><td class="lbl">Person completing this report:</td><td><input type="text" id="f_person"></td></tr>
+      <tr><td class="lbl">Phone number:</td><td><input type="text" id="f_phone"></td></tr>
+      <tr><td class="lbl">Email address:</td><td><input type="text" id="f_email"></td></tr>
+      <tr><td class="lbl">Is this a new or existing arrangement?</td><td>
+        <select id="f_arrangement"><option value=""></option><option>New</option><option>Existing</option></select>
+      </td></tr>
+    </table>
+
+    <h2 class="sec">How are you engaging with the participant?</h2>
+    <table class="f">
+      <tr><td class="lbl">Date of initial contact:</td><td><input type="text" id="f_initcontact"></td></tr>
+      <tr><td class="lbl">Agreed frequency of contact with the participant:</td><td><input type="text" id="f_freq"></td></tr>
+      <tr><td class="lbl">Nominated contact (e.g. nominee, child representative or N/A):</td><td><input type="text" id="f_nomcontact"></td></tr>
+      <tr><td class="lbl">Primary contact method:</td><td><input type="text" id="f_pc_method"></td></tr>
+      <tr><td class="lbl">Primary contact details:</td><td><input type="text" id="f_pc_details"></td></tr>
+      <tr><td class="lbl">Secondary contact method:</td><td><input type="text" id="f_sc_method"></td></tr>
+      <tr><td class="lbl">Secondary contact details:</td><td><input type="text" id="f_sc_details"></td></tr>
+      <tr><td class="lbl">Other key contact:</td><td><input type="text" id="f_okc"></td></tr>
+      <tr><td class="lbl">Other key contact details:</td><td><input type="text" id="f_okc_details"></td></tr>
+    </table>
+
+    <h2 class="sec">Current plan goals</h2>
+    <p class="guide">Use this table to tell us how the participant is planning to pursue their current goals.</p>
+    <table class="f" id="tbl_goals">
+      <thead>
+        <tr>
+          <th style="width:42%">Participant&rsquo;s goal</th>
+          <th>What are the next steps for pursuing this goal?<br><em style="font-weight:normal">(What have you and the participant agreed to next?)</em></th>
+        </tr>
+      </thead>
+      <tbody id="goals_body"></tbody>
+    </table>
+    <div class="rowbtns no-print"><button onclick="addGoal()">+ Add goal</button><button onclick="removeLast('goals_body')">&minus; Remove last</button></div>
+
+    <h2 class="sec">Request for service fields</h2>
+    <p class="guide">Use the tables below to complete the information from corresponding fields in the request for service (RFS).</p>
+
+    <table class="f" id="tbl_refassess">
+      <thead>
+        <tr>
+          <th style="width:28%">Referrals for assessment<br><em style="font-weight:normal">What are the immediate specialist assessments the participant needs connection with? These may be detailed in the RFS or identified with the participant. (List or N/A)</em></th>
+          <th style="width:24%">Actions taken<br><em style="font-weight:normal">What steps have been taken to help the participant obtain any immediate specialist assessments?</em></th>
+          <th style="width:24%">Barriers or risks identified<br><em style="font-weight:normal">What barriers have you identified (if any) to obtaining the required information?</em></th>
+          <th>Future actions<br><em style="font-weight:normal">What are the next steps to obtain the required information?</em></th>
+        </tr>
+      </thead>
+      <tbody id="refassess_body"></tbody>
+    </table>
+    <div class="rowbtns no-print"><button onclick="addRefAssess()">+ Add row</button><button onclick="removeLast('refassess_body')">&minus; Remove last</button></div>
+
+    <table class="f" id="tbl_priority">
+      <thead>
+        <tr>
+          <th style="width:28%">Community, mainstream &amp; NDIS funded supports<br><em style="font-weight:normal">What are the priority supports the participant requires connection with? These may be detailed in the RFS or identified with the participant (List or N/A)</em></th>
+          <th style="width:24%">Initial actions<br><em style="font-weight:normal">What steps have been taken to help the participant in connecting to priority supports?</em></th>
+          <th style="width:24%">Barriers or risks identified<br><em style="font-weight:normal">What barriers have you identified (if any) in connecting the participant to the supports?</em></th>
+          <th>Future actions<br><em style="font-weight:normal">What are the next steps planned to make the required connections?</em></th>
+        </tr>
+      </thead>
+      <tbody id="priority_body"></tbody>
+    </table>
+    <div class="rowbtns no-print"><button onclick="addPriority()">+ Add row</button><button onclick="removeLast('priority_body')">&minus; Remove last</button></div>
+
+    <h2 class="sec">Implementation activities</h2>
+    <p class="guide">It is important to help the participant understand how they can use their plan and organise their supports to make sure they will be adequately supported throughout the duration of their plan.</p>
+    <p class="guide">Use the check boxes to confirm the following topics have been discussed and understood by the participant.</p>
+    <ul class="checklist" id="activities">
+      <li><input type="checkbox" id="act1"><label for="act1">Plan funding included in the participant&rsquo;s plan.</label></li>
+      <li><input type="checkbox" id="act2"><label for="act2">The different support categories and their flexibility.</label></li>
+      <li><input type="checkbox" id="act3"><label for="act3">Fund management and claiming.</label></li>
+      <li><input type="checkbox" id="act4"><label for="act4">Organising and planning supports over the life of the plan.</label></li>
+      <li><input type="checkbox" id="act5"><label for="act5">The role of community and mainstream supports.</label></li>
+      <li><input type="checkbox" id="act6"><label for="act6">How to access and use the my NDIS portal and app.</label></li>
+      <li><input type="checkbox" id="act7"><label for="act7">The value and importance of service agreements.</label></li>
+      <li><input type="checkbox" id="act8"><label for="act8">If any supports have been listed in the plan, the participant knows who can deliver the support and how it may need to be provided.</label></li>
+    </ul>
+
+    <h2 class="sec">Notes</h2>
+    <p class="guide">If you were unable to explain any of the above areas, use the notes section below. Describe why and list any alternative strategies that will help the participant understand how to use their plan.</p>
+    <table class="f"><tr><td><textarea id="f_notes" style="min-height:80px"></textarea></td></tr></table>
+
+    <h2 class="sec">Conflicts of interest</h2>
+    <p class="guide">Under the NDIS Code of Conduct, all NDIS providers, including support coordinators, must act with integrity, honesty and transparency under the NDIS Code of Conduct.</p>
+    <p class="guide">To do this, support coordinators must:</p>
+    <ul class="guide">
+      <li>Recommend and provide supports and services appropriate to the needs of the participant.</li>
+      <li>Maintain integrity by declaring and avoiding any real or perceived conflicts of interest.</li>
+      <li>Avoid engaging in, participating in or promoting sharp practices.</li>
+    </ul>
+    <p class="guide">A conflict of interest may occur when someone has real or perceived competing private and professional interests. These interests may make it difficult to fulfil their professional duties without bias or the perception of bias.</p>
+
+    <p class="cbline"><strong>Do any real or perceived conflicts of interest exist?</strong><br>
+      <label><input type="checkbox" id="coi_no" onclick="exclusive('coi_no','coi_yes')"> No</label>
+      <label><input type="checkbox" id="coi_yes" onclick="exclusive('coi_yes','coi_no')"> Yes (Complete below)</label>
+    </p>
+    <p class="cbline"><strong>Have you discussed and disclosed the conflicts with the participant?</strong><br>
+      <label><input type="checkbox" id="coid_no" onclick="exclusive('coid_no','coid_yes')"> No</label>
+      <label><input type="checkbox" id="coid_yes" onclick="exclusive('coid_yes','coid_no')"> Yes</label>
+    </p>
+
+    <table class="f" id="tbl_coi">
+      <thead>
+        <tr>
+          <th style="width:42%">Identified real or perceived conflict</th>
+          <th>Management strategy agreed to by the participant</th>
+        </tr>
+      </thead>
+      <tbody id="coi_body"></tbody>
+    </table>
+    <div class="rowbtns no-print"><button onclick="addCOI()">+ Add row</button><button onclick="removeLast('coi_body')">&minus; Remove last</button></div>
+
+    <h2 class="sec">Privacy and your personal information</h2>
+    <h3 class="subsec">Collection of your personal information</h3>
+    <p class="guide">The National Disability Insurance Agency (NDIA) would like some personal information from you to simplify your engagement with the NDIS. Any personal information you provide to the NDIA is safe under the National Disability Insurance Scheme Act 2013 and the Privacy Act 1988. You can also ask to see what personal information (if any) we hold about you at any time and can seek correction if the information is wrong.</p>
+    <h3 class="subsec">Personal information use and disclosure</h3>
+    <p class="guide">The NDIA will use your information to support your involvement in the NDIS. The NDIA will <strong>not</strong> use any of your personal information for any other purpose or disclose your personal information to any other organisations or individuals (including any overseas recipients), unless authorised by law or you provide your consent for us to do so.</p>
+
+    <div class="ark-doc-foot">
+      <span>ARK PlanIt &mdash; Support Coordination &middot; arkplanit.com</span>
+      <span>Structure per official NDIS Support Coordinator Implementation Report &middot; Verify against current NDIS form before submission</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function ta(){const t=document.createElement('textarea');return t;}
+function td(el){const c=document.createElement('td');c.appendChild(el);return c;}
+function exclusive(a,b){if(document.getElementById(a).checked)document.getElementById(b).checked=false;}
+
+/* ---------- Dynamic rows ---------- */
+function addGoal(v){
+  const tb=document.getElementById('goals_body');
+  const n=tb.children.length+1;
+  const tr=document.createElement('tr');
+  const g=ta(); g.className='c_goal';
+  const s=ta(); s.className='c_next';
+  const first=document.createElement('td');
+  const b=document.createElement('strong'); b.textContent=n+'. ';
+  first.appendChild(b); first.appendChild(g);
+  tr.appendChild(first); tr.appendChild(td(s));
+  tb.appendChild(tr);
+  if(v){g.value=v.goal||'';s.value=v.next||'';}
+}
+function fourColRow(bodyId, v, keys){
+  const tb=document.getElementById(bodyId);
+  const n=tb.children.length+1;
+  const tr=document.createElement('tr');
+  const cells=[ta(),ta(),ta(),ta()];
+  const first=document.createElement('td');
+  const b=document.createElement('strong'); b.textContent=n+'. ';
+  first.appendChild(b); first.appendChild(cells[0]);
+  tr.appendChild(first);
+  for(let i=1;i<4;i++)tr.appendChild(td(cells[i]));
+  tb.appendChild(tr);
+  if(v)keys.forEach((k,i)=>{cells[i].value=v[k]||'';});
+}
+function addRefAssess(v){fourColRow('refassess_body',v,['item','actions','barriers','future']);}
+function addPriority(v){fourColRow('priority_body',v,['support','actions','barriers','future']);}
+function addCOI(v){
+  const tb=document.getElementById('coi_body');
+  const tr=document.createElement('tr');
+  const a=ta(); a.className='c_conflict';
+  const b=ta(); b.className='c_strategy';
+  tr.appendChild(td(a)); tr.appendChild(td(b));
+  tb.appendChild(tr);
+  if(v){a.value=v.conflict||'';b.value=v.strategy||'';}
+}
+function removeLast(id){
+  const tb=document.getElementById(id);
+  if(tb.children.length>1) tb.removeChild(tb.lastChild);
+}
+
+/* ---------- Context parser ---------- */
+const KEYMAP={
+  'report date':'f_reportdate','participant name':'f_pname','name':'f_pname',
+  'ndis number':'f_ndis','plan start date':'f_planstart','plan end date':'f_planend',
+  'provider':'f_provider','person completing this report':'f_person','person completing report':'f_person',
+  'phone number':'f_phone','email address':'f_email','arrangement':'f_arrangement',
+  'date of initial contact':'f_initcontact',
+  'agreed frequency of contact':'f_freq','agreed frequency of contact with the participant':'f_freq',
+  'nominated contact':'f_nomcontact','primary contact method':'f_pc_method','primary contact details':'f_pc_details',
+  'secondary contact method':'f_sc_method','secondary contact details':'f_sc_details',
+  'other key contact':'f_okc','other key contact details':'f_okc_details'
+};
+
+function parseContext(){
+  const raw=document.getElementById('ctxInput').value.trim();
+  const msg=document.getElementById('parseMsg');
+  msg.className='';msg.textContent='';
+  if(!raw){msg.className='err';msg.textContent='Nothing to parse — paste the context block first.';return;}
+  try{
+    let data = raw.startsWith('{') ? JSON.parse(raw) : parseLabelled(raw);
+    applyData(data);
+    msg.className='ok';
+    msg.textContent='Populated: '+summarise(data)+'. Review every field before export.';
+  }catch(e){
+    msg.className='err';
+    msg.textContent='Could not parse: '+e.message;
+  }
+}
+
+function parseLabelled(raw){
+  const data={fields:{},goals:[],refassess:[],priority:[],conflicts:[],activities:null,coi:{},notes:''};
+  const lines=raw.split(/\r?\n/);
+  let block=null, blockObj=null, freeKey=null;
+
+  const flush=()=>{ if(blockObj){
+      if(block==='GOAL')data.goals.push(blockObj);
+      else if(block==='REFERRAL FOR ASSESSMENT')data.refassess.push(blockObj);
+      else if(block==='PRIORITY SUPPORT')data.priority.push(blockObj);
+      else if(block==='CONFLICT')data.conflicts.push(blockObj);
+      else if(block==='CONFLICT OF INTEREST')data.coi=blockObj;
+      else if(block==='IMPLEMENTATION ACTIVITIES'&&blockObj.confirmed!=null)data.activities=blockObj.confirmed;
+    } blockObj=null; };
+
+  for(let line of lines){
+    const l=line.trim();
+    if(!l||l.startsWith('===')||l.startsWith('Notes:')||l.startsWith('- ')||l.startsWith('('))continue;
+    const bm=l.match(/^\[([^\]]+)\]$/);
+    if(bm){
+      flush();
+      block=bm[1].trim().toUpperCase();
+      if(block==='NOTES'){blockObj=null;freeKey='notes';continue;}
+      blockObj={};freeKey=null;continue;
+    }
+    if(freeKey==='notes'){data.notes+=(data.notes?'\n':'')+line;continue;}
+    const kv=l.match(/^([^:]+):\s*(.*)$/);
+    if(!kv){ if(blockObj&&blockObj._last){blockObj[blockObj._last]+='\n'+line.trim();} continue; }
+    const key=kv[1].trim().toLowerCase(), val=kv[2].trim();
+    if(blockObj){
+      const map={'goal':'goal','next steps':'next','item':'item','actions taken':'actions',
+        'barriers':'barriers','future actions':'future','support':'support','initial actions':'actions',
+        'confirmed':'confirmed','exists':'exists','discussed with participant':'discussed',
+        'conflict':'conflict','management strategy':'strategy'};
+      const k=map[key];
+      if(k){ blockObj[k]=val; blockObj._last=k; }
+      else if(blockObj._last){ blockObj[blockObj._last]+='\n'+l; }
+      else { blockObj[key.replace(/\s+/g,'_')]=val; }
+    }else{
+      if(KEYMAP[key])data.fields[KEYMAP[key]]=val;
+    }
+  }
+  flush();
+  return data;
+}
+
+function applyData(d){
+  const f=d.fields||{};
+  for(const [id,v] of Object.entries(f)){
+    const el=document.getElementById(id);
+    if(!el)continue;
+    if(el.tagName==='SELECT'){matchOpt(el,v);}
+    else el.value=normaliseDate(el,v);
+  }
+  if(d.goals&&d.goals.length){clearBody('goals_body');d.goals.forEach(g=>addGoal(g));}
+  if(d.refassess&&d.refassess.length){clearBody('refassess_body');d.refassess.forEach(x=>addRefAssess(x));}
+  if(d.priority&&d.priority.length){clearBody('priority_body');d.priority.forEach(x=>addPriority(x));}
+  if(d.conflicts&&d.conflicts.length){clearBody('coi_body');d.conflicts.forEach(x=>addCOI(x));}
+  if(d.notes)document.getElementById('f_notes').value=d.notes;
+  if(d.activities!=null){
+    const v=String(d.activities).trim().toLowerCase();
+    const all=(v==='all');
+    const nums=all?[]:v.split(/[,\s]+/).filter(Boolean);
+    for(let i=1;i<=8;i++){
+      document.getElementById('act'+i).checked = all || nums.includes(String(i));
+    }
+  }
+  if(d.coi){
+    if(d.coi.exists){setYN('coi',d.coi.exists);}
+    if(d.coi.discussed){setYN('coid',d.coi.discussed);}
+  }
+}
+function setYN(prefix,val){
+  const yes=/^y/i.test(String(val).trim());
+  document.getElementById(prefix+'_yes').checked=yes;
+  document.getElementById(prefix+'_no').checked=!yes;
+}
+function matchOpt(select,val){
+  if(!val)return;
+  const v=String(val).trim().toLowerCase();
+  for(const o of select.options){
+    if(o.value.toLowerCase()===v||o.value.toLowerCase().includes(v)){select.value=o.value;return;}
+  }
+}
+function normaliseDate(el,v){
+  if(el.type!=='date')return v;
+  const m=String(v).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return v;
+}
+function clearBody(id){document.getElementById(id).innerHTML='';}
+function summarise(d){
+  const p=[];
+  if(d.goals?.length)p.push(d.goals.length+' goal(s)');
+  if(d.refassess?.length)p.push(d.refassess.length+' referral(s) for assessment');
+  if(d.priority?.length)p.push(d.priority.length+' priority support(s)');
+  if(d.activities!=null)p.push('implementation activities');
+  if(d.conflicts?.length)p.push(d.conflicts.length+' conflict item(s)');
+  return p.length?('participant details + '+p.join(', ')):'participant details';
+}
+
+/* ---------- Actions ---------- */
+function clearAll(){
+  if(!confirm('Clear the whole form? This cannot be undone.'))return;
+  document.querySelectorAll('#doc input[type=text], #doc input[type=date], #doc textarea').forEach(e=>{e.value=e.id==='f_provider'?'ARK PlanIt':'';});
+  document.querySelectorAll('#doc input[type=checkbox]').forEach(e=>e.checked=false);
+  document.querySelectorAll('#doc select').forEach(e=>e.selectedIndex=0);
+  ['goals_body','refassess_body','priority_body','coi_body'].forEach(clearBody);
+  seedRows();
+  document.getElementById('ctxInput').value='';
+  document.getElementById('parseMsg').textContent='';
+  document.getElementById('f_reportdate').value=new Date().toISOString().slice(0,10);
+}
+function copySchema(){
+  navigator.clipboard.writeText(document.getElementById('schemaText').textContent)
+    .then(()=>flash('Schema copied.'));
+}
+function copyKevinPrompt(){
+  const p=`You are preparing an NDIS Support Coordinator Implementation Report context block for ARK PlanIt.
+
+Using ONLY information recorded in this participant's Notion records (Participant profile, current Plan, Request for Service details, Case Notes since plan start, Providers, Tasks/Actions), produce a context block in EXACTLY the following format. Rules:
+- This report covers plan implementation (typically the first 8 weeks of a new plan / RFS acceptance).
+- Leave any field blank if the information is not in the records. Do not guess or invent.
+- Repeat [GOAL], [REFERRAL FOR ASSESSMENT], [PRIORITY SUPPORT] and [CONFLICT] blocks as needed. Omit a block entirely if there is nothing to report.
+- For [IMPLEMENTATION ACTIVITIES], only mark topics as Confirmed if the case notes evidence that they were discussed with the participant.
+- Only include [CONFLICT] blocks and Exists: Yes if a real or perceived conflict is actually recorded.
+- Output only the context block, nothing else.
+
+`+document.getElementById('schemaText').textContent;
+  navigator.clipboard.writeText(p).then(()=>flash('Kevin prompt copied.'));
+}
+function flash(t){
+  const m=document.getElementById('parseMsg');m.className='ok';m.textContent=t;
+  setTimeout(()=>{if(m.textContent===t)m.textContent='';},4000);
+}
+function downloadDoc(){
+  const clone=document.getElementById('doc').cloneNode(true);
+  clone.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    const s=document.createElement('span');
+    s.textContent=(cb.checked?'\u2612 ':'\u2610 ');
+    cb.replaceWith(s);
+  });
+  clone.querySelectorAll('input').forEach(i=>{
+    const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s);
+  });
+  clone.querySelectorAll('textarea').forEach(t=>{
+    const d=document.createElement('div');d.style.whiteSpace='pre-wrap';d.textContent=t.value;t.replaceWith(d);
+  });
+  clone.querySelectorAll('select').forEach(s=>{
+    const sp=document.createElement('span');sp.textContent=s.value;s.replaceWith(sp);
+  });
+  clone.querySelectorAll('.rowbtns,.no-print').forEach(e=>e.remove());
+  const name=(document.getElementById('f_pname').value||'participant').replace(/[^\w\- ]/g,'').trim().replace(/\s+/g,'_');
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12.5px;color:#22303f}h1{font-size:20px;border-bottom:1px solid #22303f}h2{color:#6b2c91;font-size:15px}h3{color:#6b2c91;font-size:13.5px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #8d99a6;padding:6px;font-size:12px;vertical-align:top;text-align:left}th{background:#efe9f4}td.lbl{background:#f4f6f8;font-weight:bold}ul.checklist{list-style:none;padding-left:0}</style></head><body>${clone.innerHTML}</body></html>`;
+  const blob=new Blob(['\ufeff'+html],{type:'application/msword'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`NDIS_SC_Implementation_Report_${name}.doc`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Init ---------- */
+function seedRows(){
+  for(let i=0;i<5;i++)addGoal();
+  for(let i=0;i<3;i++)addRefAssess();
+  for(let i=0;i<4;i++)addPriority();
+  for(let i=0;i<3;i++)addCOI();
+}
+seedRows();
+document.getElementById('f_reportdate').value=new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
