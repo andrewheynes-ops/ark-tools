@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK Tools — NDIS Report Generators</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 3rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .tools-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .tool-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .tool-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .tool-icon {
+            font-size: 2rem;
+        }
+        
+        .tool-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .tool-description {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .tool-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        footer {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .utility-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 ARK Tools</h1>
+            <p class="subtitle">NDIS Report Generators & Utilities</p>
+        </header>
+        
+        <main>
+            <div class="tools-grid">
+                <!-- Support Plan Generator -->
+                <a href="ark-support-plan.html" class="tool-card">
+                    <div class="tool-header">
+                        <span class="tool-icon">📄</span>
+                        <span class="tool-title">ARK Support Plan Generator</span>
+                    </div>
+                    <p class="tool-description">
+                        Generate Support Coordination Plans (16.2) with participant details, goals, providers, and funding breakdown.
+                    </p>
+                    <div class="tool-meta">
+                        <span class="badge badge-success">Parse & populate</span>
+                        <span class="badge badge-success">Word export</span>
+                    </div>
+                </a>
+                
+                <!-- Progress Report Generator -->
+                <a href="ndis-progress-report.html" class="tool-card">
+                    <div class="tool-header">
+                        <span class="tool-icon">📈</span>
+                        <span class="tool-title">NDIS Progress Report Generator</span>
+                    </div>
+                    <p class="tool-description">
+                        Track participant progress, celebrations, supports, referrals, and safety concerns for regular reporting.
+                    </p>
+                    <div class="tool-meta">
+                        <span class="badge badge-success">Parse & populate</span>
+                        <span class="badge badge-success">Word export</span>
+                    </div>
+                </a>
+                
+                <!-- Implementation Report Generator -->
+                <a href="ndis-implementation-report.html" class="tool-card">
+                    <div class="tool-header">
+                        <span class="tool-icon">📊</span>
+                        <span class="tool-title">NDIS Implementation Report Generator</span>
+                    </div>
+                    <p class="tool-description">
+                        Document plan implementation activities, assessments, priority supports, and initial coordination (first 8 weeks).
+                    </p>
+                    <div class="tool-meta">
+                        <span class="badge badge-success">Parse & populate</span>
+                        <span class="badge badge-success">Word export</span>
+                    </div>
+                </a>
+                
+                <!-- Service Agreement Generator -->
+                <a href="ark-service-agreement.html" class="tool-card">
+                    <div class="tool-header">
+                        <span class="tool-icon">📋</span>
+                        <span class="tool-title">ARK Service Agreement Generator</span>
+                    </div>
+                    <p class="tool-description">
+                        Create NDIS service agreements with participant details, support line items, and representative information.
+                    </p>
+                    <div class="tool-meta">
+                        <span class="badge badge-info">Direct entry</span>
+                        <span class="badge badge-success">Word export</span>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="utility-section">
+                <h2 class="section-title">Utilities</h2>
+                <div class="tools-grid">
+                    <!-- PDF Extractor -->
+                    <a href="ark-pdf-extractor.html" class="tool-card">
+                        <div class="tool-header">
+                            <span class="tool-icon">🔍</span>
+                            <span class="tool-title">ARK PDF Extractor</span>
+                        </div>
+                        <p class="tool-description">
+                            Extract text content from PDF files for use in reports and documentation.
+                        </p>
+                        <div class="tool-meta">
+                            <span class="badge badge-info">Utility</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>&copy; 2026 ARK PlanIt — NDIS Support Coordination Tools</p>
+        </footer>
+    </div>
+</body>
+</html>
