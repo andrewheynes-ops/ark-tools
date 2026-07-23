@@ -602,13 +602,26 @@ function copySchema(){
 function copyKevinPrompt(){
   const p=`You are preparing an NDIS Support Coordinator Progress Report context block for ARK PlanIt.
 
-Using ONLY information recorded in this participant's Notion records (Participant profile, current Plan, Case Notes for this reporting period, Providers, Tasks/Actions, Incidents), produce a context block in EXACTLY the following format. Rules:
-- Use the official NDIS 1-5 rating scales where a rating is required.
+Using ONLY information recorded in this participant's Notion records, produce a context block in EXACTLY the following format.
+
+Sources you may read:
+- Participant profile, INCLUDING the section headed "Current plan — Goals" on the participant page
+- Current Plan
+- Case Notes for this reporting period
+- Providers
+- Tasks/Actions
+- Incidents
+
+Rules:
+- GOALS ARE MANDATORY AND COMPLETE. Produce one [GOAL] block for every goal recorded in the participant's current plan, in plan order. Never omit a goal. If no coordination activity is evidenced against a goal this period, still include the goal and leave Comments blank.
+- If a goal appears in more than one place and the wording differs, do not reconcile them. Use the participant page version and record the discrepancy in Comments.
+- DO NOT generate "Progress rating". That field records how the PARTICIPANT feels they are progressing — it is their view, not an assessment. Leave it blank unless a rating stated by the participant is recorded in the notes.
+- Comments are support coordinator comments: next steps, and any obstacles that affected your support of that goal.
+- Use the official NDIS 1-5 rating scales where a rating is required elsewhere.
 - Leave any field blank if the information is not in the records. Do not guess or invent.
-- Repeat [GOAL], [NEW COMMUNITY SUPPORT], [CURRENT COMMUNITY SUPPORT], [REFERRAL] and [SAFETY] blocks as needed. Omit a block entirely if there is nothing to report.
+- Repeat [NEW COMMUNITY SUPPORT], [CURRENT COMMUNITY SUPPORT], [REFERRAL] and [SAFETY] blocks as needed. Omit those blocks if there is nothing to report.
 - Safety items are for context in this report only; they are not a substitute for incident reporting.
 - Output only the context block, nothing else.
-
 `+document.getElementById('schemaText').textContent;
   navigator.clipboard.writeText(p).then(()=>flash('Kevin prompt copied.'));
 }
