@@ -183,7 +183,7 @@ function addProvider(){
     '<div class="provider-grid">'+
     '<div class="field"><label>Provider</label><input type="text" id="pn-'+id+'" placeholder="Provider name or GAP"></div>'+
     '<div class="field"><label>Service type</label><input type="text" id="ps-'+id+'" placeholder="e.g. OT, SIL, transport"></div>'+
-    '<div class="field"><label>Agreement status</label><select id="pa-'+id+'"><option>Active</option><option>Pending</option><option>GAP — not yet filled</option><option>Ended</option></select></div>'+
+    '<div class="field"><label>Agreement status</label><select id="pa-'+id+'"><option>Active</option><option>Pending</option><option>GAP — not yet filled</option><option>Completed</option><option>Ended</option></select></div>'+
     '<div class="field"><label>Actions</label><input type="text" id="px-'+id+'" placeholder="e.g. Review due June"></div>'+
     '</div>';
   var btn=document.createElement('button');
@@ -307,11 +307,13 @@ function spNormDate(val){
 }
 function spNormStatus(val){
   var s=(val||'').trim().toLowerCase();
+  if(!s)return null;
   if(s.indexOf('gap')===0)return 'GAP \u2014 not yet filled';
   if(s==='active')return 'Active';
   if(s==='pending')return 'Pending';
   if(s==='ended')return 'Ended';
-  return 'Active';
+  if(s==='completed'||s==='complete')return 'Completed';
+  return null; /* unmapped: never guess - caller flags it */
 }
 
 function parseLabelled(raw){
@@ -383,9 +385,11 @@ function parseLabelled(raw){
   return data;
 }
 
+var SP_UNMAPPED=[];
 function spSet(id,val){var e=document.getElementById(id);if(e&&val!==undefined&&val!=='')e.value=val;}
 
 function applyData(d){
+  SP_UNMAPPED=[];
   for(var k in d.fields){
     var val=d.fields[k];
     if(k==='p-dob'||k==='p-plan-start'||k==='p-plan-end')val=spNormDate(val);
@@ -410,7 +414,18 @@ function applyData(d){
     d.providers.forEach(function(p){
       addProvider();
       spSet('pn-'+pc,p.name||'');spSet('ps-'+pc,p.svc||'');spSet('px-'+pc,p.actions||'');
-      var sel=document.getElementById('pa-'+pc);if(sel)sel.value=spNormStatus(p.status);
+      var sel=document.getElementById('pa-'+pc);
+      var mapped=spNormStatus(p.status);
+      if(sel){
+        if(mapped){sel.value=mapped;}
+        else if(p.status&&p.status.trim()){
+          var raw=p.status.trim();
+          var opt=document.createElement('option');
+          opt.value=raw;opt.textContent=raw+'  (unrecognised \u2014 check)';
+          sel.appendChild(opt);sel.value=raw;
+          SP_UNMAPPED.push((p.name||'provider')+': "'+raw+'"');
+        }
+      }
     });
   }
 }
@@ -424,6 +439,30 @@ function spSummarise(d){
   return bits.join(', ');
 }
 
+function spAuDate(iso){
+  if(!iso)return '';
+  var p=iso.split('-');
+  if(p.length!==3)return '';
+  var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return parseInt(p[2],10)+' '+M[parseInt(p[1],10)-1]+' '+p[0];
+}
+function spDateEchoes(){
+  var ins=document.querySelectorAll('input[type=date]');
+  for(var i=0;i<ins.length;i++){
+    (function(el){
+      var id='echo-'+(el.id||('d'+i));
+      var sp=document.getElementById(id);
+      if(!sp){
+        sp=document.createElement('div');
+        sp.id=id;
+        sp.style.cssText='font-size:11px;color:#777;margin-top:3px;';
+        if(el.parentNode)el.parentNode.appendChild(sp);
+        el.addEventListener('change',function(){sp.textContent=el.value?('reads as '+spAuDate(el.value)):'';});
+      }
+      sp.textContent=el.value?('reads as '+spAuDate(el.value)):'';
+    })(ins[i]);
+  }
+}
 function parseContext(){
   var raw=document.getElementById('ctxInput').value.trim();
   var msg=document.getElementById('parseMsg');
@@ -432,8 +471,14 @@ function parseContext(){
   try{
     var data=raw.charAt(0)==='{'?JSON.parse(raw):parseLabelled(raw);
     applyData(data);
+    spDateEchoes();
     msg.className='ok';
-    msg.textContent='Populated: '+spSummarise(data)+'. Review every field before export.';
+    var warn='';
+    if(SP_UNMAPPED.length){
+      warn=' \u26a0 Unrecognised agreement status \u2014 set manually: '+SP_UNMAPPED.join('; ')+'.';
+    }
+    msg.textContent='Populated: '+spSummarise(data)+'. Review every field before export.'+warn;
+    if(SP_UNMAPPED.length)msg.className='err';
   }catch(e){
     msg.className='err';
     msg.textContent='Could not parse: '+e.message;
@@ -488,36 +533,45 @@ function wRun(text,o){
 function wP(runs,o){
   o=o||{};
   var pr='';
-  if(o.spaceAfter!==undefined)pr+='<w:spacing w:after="'+o.spaceAfter+'"/>';
+  if(o.keepNext)pr+='<w:keepNext/><w:keepLines/>';
+  if(o.spaceAfter!==undefined||o.line)pr+='<w:spacing'+(o.before?' w:before="'+o.before+'"':'')+' w:after="'+(o.spaceAfter===undefined?60:o.spaceAfter)+'"'+(o.line?' w:line="'+o.line+'" w:lineRule="auto"':'')+'/>';
   var ppr=pr?'<w:pPr>'+pr+'</w:pPr>':'';
   return '<w:p>'+ppr+runs+'</w:p>';
 }
 function wH(text){
-  return '<w:p><w:pPr><w:spacing w:before="240" w:after="80"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="C2185B"/></w:pBdr></w:pPr>'+wRun(text,{bold:true,color:'C2185B',size:26})+'</w:p>';
+  return '<w:p><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="260" w:after="90"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="C2185B"/></w:pBdr></w:pPr>'+wRun(text,{bold:true,color:'C2185B',size:26})+'</w:p>';
 }
 function wCell(content,o){
   o=o||{};
   var pr='<w:tcPr>';
-  if(o.w)pr+='<w:tcW w:w="'+o.w+'" w:type="pct"/>';
-  if(o.fill)pr+='<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>';
   if(o.span)pr+='<w:gridSpan w:val="'+o.span+'"/>';
-  pr+='</w:tcPr>';
-  return '<w:tc>'+pr+wP(wRun(content,o.run||{}),{spaceAfter:20})+'</w:tc>';
+  if(o.fill)pr+='<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>';
+  pr+='<w:vAlign w:val="center"/></w:tcPr>';
+  return '<w:tc>'+pr+wP(wRun(content,o.run||{}),{spaceAfter:0,line:240})+'</w:tc>';
 }
-function wTable(rows){
+function wTable(rows,widths){
   var b='<w:tblBorders><w:top w:val="single" w:sz="4" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:color="CCCCCC"/><w:insideH w:val="single" w:sz="4" w:color="CCCCCC"/><w:insideV w:val="single" w:sz="4" w:color="CCCCCC"/></w:tblBorders>';
-  var maxCols=0;
-  rows.forEach(function(cells){
-    var n=0;
-    cells.forEach(function(c){var m=c.match(/w:gridSpan w:val="(\d+)"/);n+=m?parseInt(m[1],10):1;});
-    if(n>maxCols)maxCols=n;
-  });
-  var grid='<w:tblGrid>',colW=Math.floor(9638/(maxCols||1));
-  for(var g=0;g<(maxCols||1);g++)grid+='<w:gridCol w:w="'+colW+'"/>';
+  var cols=widths&&widths.length?widths.slice():null;
+  if(!cols){
+    var maxCols=0;
+    rows.forEach(function(cells){
+      var n=0;
+      cells.forEach(function(c){var m=c.match(/w:gridSpan w:val="(\d+)"/);n+=m?parseInt(m[1],10):1;});
+      if(n>maxCols)maxCols=n;
+    });
+    cols=[];var cw=Math.floor(9638/(maxCols||1));
+    for(var g=0;g<(maxCols||1);g++)cols.push(cw);
+  }
+  var grid='<w:tblGrid>';
+  cols.forEach(function(w){grid+='<w:gridCol w:w="'+w+'"/>';});
   grid+='</w:tblGrid>';
-  var xml='<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>'+b+'<w:tblLayout w:type="fixed"/></w:tblPr>'+grid;
-  rows.forEach(function(cells){xml+='<w:tr>'+cells.join('')+'</w:tr>';});
-  return xml+'</w:tbl>';
+  var mar='<w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar>';
+  var xml='<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>'+b+mar+'<w:tblLayout w:type="fixed"/></w:tblPr>'+grid;
+  rows.forEach(function(cells,i){
+    var trPr='<w:trPr><w:cantSplit/>'+(i===0?'<w:tblHeader/>':'')+'</w:trPr>';
+    xml+='<w:tr>'+trPr+cells.join('')+'</w:tr>';
+  });
+  return xml+'</w:tbl>'+wP('',{spaceAfter:40});
 }
 function spCollect(){
   var goals=[];
@@ -555,7 +609,7 @@ function buildDocxBytes(d){
     [wCell('Address',LBL),wCell(d.address,{w:'5200',span:3,run:{size:22}})],
     [wCell('Email',LBL),wCell(d.email,{w:'1700',run:{size:22}}),wCell('Support coordinator',LBL),wCell(d.sc,{w:'1700',run:{size:22}})],
     [wCell('Plan start date',LBL),wCell(d.planStart,{w:'1700',run:{size:22}}),wCell('Plan end date',LBL),wCell(d.planEnd,{w:'1700',run:{size:22}})]
-  ]);
+  ],[2050,2769,2050,2769]);
   body+=wH('Participant alerts');
   var alerts=[['Health / medical',d.health],['Communication',d.comms],['What is important to know when working with me',d.important],['Who needs to help with or know about this plan',d.who]];
   alerts.forEach(function(a){
@@ -565,34 +619,34 @@ function buildDocxBytes(d){
   var gRows=[[wCell('NDIS goal',Object.assign({w:'1600'},HDR)),wCell('Support coordination activities',Object.assign({w:'2400'},HDR)),wCell('Review date',Object.assign({w:'1000'},HDR))]];
   if(d.goals.length)d.goals.forEach(function(g){gRows.push([wCell(g.goal,{w:'1600',run:{size:22}}),wCell(g.act,{w:'2400',run:{size:22}}),wCell(g.rev,{w:'1000',run:{size:22}})]);});
   else gRows.push([wCell('No goals added',{w:'5000',span:3,run:{grey:true,size:22}})]);
-  body+=wTable(gRows);
+  body+=wTable(gRows,[2700,4938,2000]);
   body+=wH('Capacity building');
   body+=wP(wRun(d.capacity||' ',{size:22}),{spaceAfter:80});
   body+=wH('Provider map');
   var pRows=[[wCell('Provider',Object.assign({w:'1400'},HDR)),wCell('Service type',Object.assign({w:'1200'},HDR)),wCell('Agreement status',Object.assign({w:'1200'},HDR)),wCell('Actions',Object.assign({w:'1200'},HDR))]];
   if(d.providers.length)d.providers.forEach(function(p){pRows.push([wCell(p.name,{w:'1400',run:{size:22}}),wCell(p.svc,{w:'1200',run:{size:22}}),wCell(p.status,{w:'1200',run:{size:22}}),wCell(p.actions,{w:'1200',run:{size:22}})]);});
   else pRows.push([wCell('No providers added',{w:'5000',span:4,run:{grey:true,size:22}})]);
-  body+=wTable(pRows);
+  body+=wTable(pRows,[2500,2000,2100,3038]);
   body+=wH('Funding');
   body+=wTable([
     [wCell('Support coordination funding',LBL),wCell(d.fTotal?'$'+d.fTotal:'',{w:'1700',run:{size:22}}),wCell('Total hours',LBL),wCell(d.fHours,{w:'1700',run:{size:22}})],
     [wCell('Plan monitoring',LBL),wCell('Approx hours: '+(d.fMon||''),{w:'5200',span:3,run:{size:22}})],
     [wCell('General plan implementation',LBL),wCell('Approx hours: '+(d.fImp||''),{w:'5200',span:3,run:{size:22}})],
     [wCell('Preparing for next plan',LBL),wCell('Approx hours: '+(d.fRev||''),{w:'5200',span:3,run:{size:22}})]
-  ]);
+  ],[2600,2219,2600,2219]);
   body+=wH('How we work together');
   body+=wTable([
     [wCell('Frequency of contact',LBL),wCell(d.freq,{w:'3200',run:{size:22}})],
     [wCell('Method of contact',LBL),wCell(d.method,{w:'3200',run:{size:22}})]
-  ]);
+  ],[2600,7038]);
   body+=wH('Sign off');
   body+=wP(wRun('Participant name / nominee: ',{size:22})+wRun('_________________________',{size:22})+wRun('   Signature: ',{size:22})+wRun('_______________',{size:22})+wRun('   Date: ',{size:22})+wRun('___________',{size:22}),{spaceAfter:240});
   body+=wP(wRun('Support coordinator name: ',{size:22})+wRun('_________________________',{size:22})+wRun('   SC signature: ',{size:22})+wRun('_______________',{size:22})+wRun('   Date: ',{size:22})+wRun('___________',{size:22}),{spaceAfter:240});
-  body+=wP(wRun('Support Coordination Plan 16.2 \u2014 ARK Support Coordinators Pty Ltd ABN 68 656 292 063 \u2014 Rev. 3, June 2026',{grey:true,size:18}),{spaceAfter:0});
+  /* footer moved to page footer (with page numbers) */
   var docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
     +'<w:body>'+body
-    +'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>'
+    +'<w:sectPr><w:footerReference w:type="default" r:id="rIdF1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:footer="567"/></w:sectPr>'
     +'</w:body></w:document>';
   var contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -600,6 +654,7 @@ function buildDocxBytes(d){
     +'<Default Extension="xml" ContentType="application/xml"/>'
     +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
     +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+    +'<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
     +'</Types>';
   var rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -608,13 +663,24 @@ function buildDocxBytes(d){
   var docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
     +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+    +'<Relationship Id="rIdF1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'
     +'</Relationships>';
   var styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     +'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
     +'<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault>'
     +'<w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
     +'</w:styles>';
+  var footerRun=function(t){return '<w:r><w:rPr><w:color w:val="888888"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve">'+xesc(t)+'</w:t></w:r>';};
+  var fld=function(instr){return '<w:fldSimple w:instr=" '+instr+' "><w:r><w:rPr><w:color w:val="888888"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>';};
+  var footerXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    +'<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="DDDDDD"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs><w:spacing w:before="60" w:after="0"/></w:pPr>'
+    +footerRun('Support Coordination Plan 16.2 \u2014 ARK Support Coordinators Pty Ltd ABN 68 656 292 063')
+    +'<w:r><w:tab/></w:r>'
+    +footerRun('Page ')+fld('PAGE')+footerRun(' of ')+fld('NUMPAGES')
+    +'</w:p></w:ftr>';
   return spZip([
+    {name:'word/footer1.xml',data:spEnc(footerXml)},
     {name:'[Content_Types].xml',data:spEnc(contentTypes)},
     {name:'_rels/.rels',data:spEnc(rels)},
     {name:'word/_rels/document.xml.rels',data:spEnc(docRels)},
