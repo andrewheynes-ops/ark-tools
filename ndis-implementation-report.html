@@ -84,7 +84,7 @@
 <div class="toolbar no-print">
   <div class="brand">ARK PlanIt <span>| NDIS SC Implementation Report Generator</span></div>
   <button class="secondary" onclick="clearAll()">Clear form</button>
-  <button class="secondary" onclick="downloadDoc()">Download .doc</button>
+  <button class="secondary" onclick="downloadDoc()">Download Word (.docx)</button>
   <button onclick="window.print()">Print / Save as PDF</button>
 </div>
 
@@ -568,31 +568,290 @@ function flash(t){
   setTimeout(()=>{if(m.textContent===t)m.textContent='';},4000);
 }
 function downloadDoc(){
-  const clone=document.getElementById('doc').cloneNode(true);
-  clone.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-    const s=document.createElement('span');
-    s.textContent=(cb.checked?'\u2612 ':'\u2610 ');
-    cb.replaceWith(s);
-  });
-  clone.querySelectorAll('input').forEach(i=>{
-    const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s);
-  });
-  clone.querySelectorAll('textarea').forEach(t=>{
-    const d=document.createElement('div');d.style.whiteSpace='pre-wrap';d.textContent=t.value;t.replaceWith(d);
-  });
-  clone.querySelectorAll('select').forEach(s=>{
-    const sp=document.createElement('span');sp.textContent=s.value;s.replaceWith(sp);
-  });
-  clone.querySelectorAll('.rowbtns,.no-print').forEach(e=>e.remove());
-  const name=(document.getElementById('f_pname').value||'participant').replace(/[^\w\- ]/g,'').trim().replace(/\s+/g,'_');
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12.5px;color:#22303f}h1{font-size:20px;border-bottom:1px solid #22303f}h2{color:#6b2c91;font-size:15px}h3{color:#6b2c91;font-size:13.5px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #8d99a6;padding:6px;font-size:12px;vertical-align:top;text-align:left}th{background:#efe9f4}td.lbl{background:#f4f6f8;font-weight:bold}ul.checklist{list-style:none;padding-left:0}</style></head><body>${clone.innerHTML}</body></html>`;
-  const blob=new Blob(['\ufeff'+html],{type:'application/msword'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`NDIS_SC_Implementation_Report_${name}.doc`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  var root = document.getElementById('doc');
+  if(!root){ alert('Nothing to export.'); return; }
+  var nameEl = document.getElementById('f_pname');
+  var nm = nameEl ? nameEl.value : '';
+  arkDownloadDocx(arkHtmlToDocx(root,{accent:'6B2C91'}),
+    'NDIS-SC-Implementation-Report-'+arkSafeName(nm)+'-'+arkToday()+'.docx');
 }
+
+/* ================= ARK shared .docx engine (generic HTML -> WordprocessingML) =================
+   Dependency-free. Converts an HTML string or DOM node into a valid .docx.
+   Handles: h1-h3, p/div, table (colspan + shading), ul/ol, br, b/strong, i/em, checkboxes.
+   ============================================================================================ */
+var ARK_CRC_T=(function(){var t=[],c;for(var n=0;n<256;n++){c=n;for(var k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function arkCrc32(u8){var c=0xFFFFFFFF;for(var i=0;i<u8.length;i++)c=ARK_CRC_T[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function arkEnc(s){if(typeof TextEncoder!=='undefined')return new TextEncoder().encode(s);var b=[];for(var i=0;i<s.length;i++){var cp=s.codePointAt(i);if(cp>0xFFFF)i++;if(cp<0x80)b.push(cp);else if(cp<0x800){b.push(0xC0|cp>>6,0x80|cp&63);}else if(cp<0x10000){b.push(0xE0|cp>>12,0x80|cp>>6&63,0x80|cp&63);}else{b.push(0xF0|cp>>18,0x80|cp>>12&63,0x80|cp>>6&63,0x80|cp&63);}}return new Uint8Array(b);}
+function arkZip(entries){
+  var parts=[],central=[],offset=0;
+  function u16(v){return new Uint8Array([v&255,v>>8&255]);}
+  function u32(v){return new Uint8Array([v&255,v>>8&255,v>>16&255,v>>>24&255]);}
+  entries.forEach(function(e){
+    var nameB=arkEnc(e.name),data=e.data,crc=arkCrc32(data);
+    [u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(nameB.length),u16(0)].forEach(function(x){parts.push(x);});
+    parts.push(nameB);parts.push(data);
+    [u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(nameB.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset)].forEach(function(x){central.push(x);});
+    central.push(nameB);
+    offset+=30+nameB.length+data.length;
+  });
+  var cdSize=0;central.forEach(function(x){cdSize+=x.length;});
+  var eocd=[u32(0x06054b50),u16(0),u16(0),u16(entries.length),u16(entries.length),u32(cdSize),u32(offset),u16(0)];
+  var all=parts.concat(central,eocd),total=0;
+  all.forEach(function(x){total+=x.length;});
+  var out=new Uint8Array(total),pos=0;
+  all.forEach(function(x){out.set(x,pos);pos+=x.length;});
+  return out;
+}
+function arkX(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ---- style helpers ---- */
+function arkHex(v){
+  if(!v)return null;
+  v=String(v).trim();
+  var m=v.match(/^#([0-9a-f]{6})$/i);if(m)return m[1].toUpperCase();
+  m=v.match(/^#([0-9a-f]{3})$/i);if(m)return (m[1][0]+m[1][0]+m[1][1]+m[1][1]+m[1][2]+m[1][2]).toUpperCase();
+  m=v.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if(m){var h=function(n){n=parseInt(n,10).toString(16).toUpperCase();return n.length<2?'0'+n:n;};return h(m[1])+h(m[2])+h(m[3]);}
+  return null;
+}
+function arkStyleOf(el){
+  var s={};
+  var st=el.getAttribute&&el.getAttribute('style');
+  if(st){
+    var bg=st.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+    if(bg)s.fill=arkHex(bg[1]);
+    var col=st.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+    if(col)s.color=arkHex(col[1]);
+    var fw=st.match(/font-weight\s*:\s*([^;]+)/i);
+    if(fw&&/bold|[67]00|800|900/i.test(fw[1]))s.bold=true;
+    var fs=st.match(/font-size\s*:\s*([\d.]+)px/i);
+    if(fs)s.sz=Math.round(parseFloat(fs[1])*1.5);
+  }
+  var cls=(el.className&&typeof el.className==='string')?el.className:'';
+  if(/\blbl\b/.test(cls)){s.fill=s.fill||'F4F4F4';s.bold=true;}
+  if(/\bnote\b|\balert\b/.test(cls))s.fill=s.fill||'FFF8F9';
+  return s;
+}
+
+/* ---- inline runs ---- */
+function arkRuns(node,inh){
+  inh=inh||{};
+  var out='';
+  var kids=node.childNodes||[];
+  for(var i=0;i<kids.length;i++){
+    var n=kids[i];
+    if(n.nodeType===3){
+      var t=n.nodeValue.replace(/\s+/g,' ');
+      if(!t||!t.trim()){ if(t===' '&&out)out+=''; continue; }
+      out+=arkRun(t,inh);
+    }else if(n.nodeType===1){
+      var tag=n.tagName.toLowerCase();
+      if(tag==='br'){out+='<w:r><w:br/></w:r>';continue;}
+      if(tag==='script'||tag==='style'||tag==='button')continue;
+      if(tag==='input'){
+        var ity=(n.getAttribute('type')||'text').toLowerCase();
+        if(ity==='checkbox')out+=arkRun(n.checked?'\u2612 ':'\u2610 ',inh);
+        else if(ity!=='hidden')out+=arkRun(n.value||'',inh);
+        continue;
+      }
+      if(tag==='select'){out+=arkRun(n.value||'',inh);continue;}
+      if(tag==='textarea'){out+=arkRun(n.value||'',inh);continue;}
+      var st=arkStyleOf(n),o={};
+      for(var k in inh)o[k]=inh[k];
+      if(tag==='b'||tag==='strong')o.bold=true;
+      if(tag==='i'||tag==='em')o.italic=true;
+      if(st.bold)o.bold=true;
+      if(st.color)o.color=st.color;
+      if(st.sz)o.sz=st.sz;
+      out+=arkRuns(n,o);
+    }
+  }
+  return out;
+}
+function arkRun(text,o){
+  o=o||{};
+  var pr='';
+  if(o.bold)pr+='<w:b/>';
+  if(o.italic)pr+='<w:i/>';
+  if(o.color)pr+='<w:color w:val="'+o.color+'"/>';
+  if(o.sz)pr+='<w:sz w:val="'+o.sz+'"/><w:szCs w:val="'+o.sz+'"/>';
+  var lines=String(text==null?'':text).split('\n'),xml='';
+  for(var i=0;i<lines.length;i++){
+    if(i>0)xml+='<w:br/>';
+    xml+='<w:t xml:space="preserve">'+arkX(lines[i])+'</w:t>';
+  }
+  return '<w:r>'+(pr?'<w:rPr>'+pr+'</w:rPr>':'')+xml+'</w:r>';
+}
+function arkPara(runs,o){
+  o=o||{};
+  var pr='';
+  if(o.before||o.after!==undefined)pr+='<w:spacing'+(o.before?' w:before="'+o.before+'"':'')+' w:after="'+(o.after===undefined?60:o.after)+'"/>';
+  if(o.border)pr+='<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="'+o.border+'"/></w:pBdr>';
+  if(o.ind)pr+='<w:ind w:left="'+o.ind+'"/>';
+  if(!runs)runs='<w:r><w:t xml:space="preserve"></w:t></w:r>';
+  return '<w:p>'+(pr?'<w:pPr>'+pr+'</w:pPr>':'')+runs+'</w:p>';
+}
+
+/* ---- table ---- */
+function arkTable(tbl,ctx){
+  var rows=[],maxCols=0;
+  var trs=tbl.querySelectorAll?tbl.querySelectorAll('tr'):[];
+  for(var r=0;r<trs.length;r++){
+    var tr=trs[r],cells=[],tds=tr.children||[],rowCols=0;
+    for(var c=0;c<tds.length;c++){
+      var td=tds[c];
+      var tag=td.tagName?td.tagName.toLowerCase():'';
+      if(tag!=='td'&&tag!=='th')continue;
+      var st=arkStyleOf(td);
+      var trSt=arkStyleOf(tr);
+      var fill=st.fill||trSt.fill||(tag==='th'?'EFE9F4':null);
+      var inh={};
+      if(st.color||trSt.color)inh.color=st.color||trSt.color;
+      if(st.bold||tag==='th')inh.bold=true;
+      inh.sz=st.sz||20;
+      var inner=arkBlocks(td,ctx,inh);
+      if(!inner)inner=arkPara(arkRun('',inh),{after:20});
+      var span=parseInt(td.getAttribute('colspan')||'1',10);
+      rowCols+=span;
+      var pr='<w:tcPr>';
+      if(span>1)pr+='<w:gridSpan w:val="'+span+'"/>';
+      if(fill)pr+='<w:shd w:val="clear" w:color="auto" w:fill="'+fill+'"/>';
+      pr+='<w:vAlign w:val="top"/></w:tcPr>';
+      cells.push('<w:tc>'+pr+inner+'</w:tc>');
+    }
+    if(cells.length){if(rowCols>maxCols)maxCols=rowCols;rows.push('<w:tr>'+cells.join('')+'</w:tr>');}
+  }
+  if(!rows.length)return '';
+  var b='<w:tblBorders><w:top w:val="single" w:sz="4" w:color="BBBBBB"/><w:left w:val="single" w:sz="4" w:color="BBBBBB"/><w:bottom w:val="single" w:sz="4" w:color="BBBBBB"/><w:right w:val="single" w:sz="4" w:color="BBBBBB"/><w:insideH w:val="single" w:sz="4" w:color="BBBBBB"/><w:insideV w:val="single" w:sz="4" w:color="BBBBBB"/></w:tblBorders>';
+  var grid='<w:tblGrid>';
+  var colW=Math.floor(9638/(maxCols||1));
+  for(var g=0;g<(maxCols||1);g++)grid+='<w:gridCol w:w="'+colW+'"/>';
+  grid+='</w:tblGrid>';
+  return '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>'+b+'</w:tblPr>'+grid+rows.join('')+'</w:tbl>'+arkPara('',{after:80});
+}
+
+/* ---- block walker ---- */
+var ARK_HEAD={h1:{sz:34,after:120},h2:{sz:26,before:220,after:80},h3:{sz:23,before:160,after:60},h4:{sz:22,before:120,after:60}};
+function arkBlocks(node,ctx,inh){
+  ctx=ctx||{};inh=inh||{};
+  var out='',kids=node.childNodes||[],pending='';
+  var flush=function(){ if(pending.trim()){out+=arkPara(pending,{after:60});} pending=''; };
+  for(var i=0;i<kids.length;i++){
+    var n=kids[i];
+    if(n.nodeType===3){
+      var t=n.nodeValue.replace(/\s+/g,' ');
+      if(t.trim())pending+=arkRun(t,inh);
+      continue;
+    }
+    if(n.nodeType!==1)continue;
+    var tag=n.tagName.toLowerCase();
+    if(tag==='script'||tag==='style'||tag==='button')continue;
+    var cls=(n.className&&typeof n.className==='string')?n.className:'';
+    if(/\bno-print\b|\browbtns\b/.test(cls))continue;
+    if(ARK_HEAD[tag]){
+      flush();
+      var h=ARK_HEAD[tag],st=arkStyleOf(n),o={bold:true,sz:h.sz};
+      o.color=st.color||ctx.accent||null;
+      out+=arkPara(arkRuns(n,o),{before:h.before,after:h.after,border:ctx.accent||null});
+      continue;
+    }
+    if(tag==='table'){flush();out+=arkTable(n,ctx);continue;}
+    if(tag==='ul'||tag==='ol'){
+      flush();
+      var lis=n.children||[];
+      for(var j=0;j<lis.length;j++){
+        if(!lis[j].tagName||lis[j].tagName.toLowerCase()!=='li')continue;
+        var bullet=(tag==='ol')?(j+1)+'. ':'\u2022  ';
+        out+=arkPara(arkRun(bullet,inh)+arkRuns(lis[j],inh),{after:40,ind:360});
+      }
+      continue;
+    }
+    if(tag==='br'){pending+='<w:r><w:br/></w:r>';continue;}
+    if(tag==='input'){
+      var ty=(n.getAttribute('type')||'text').toLowerCase();
+      if(ty==='checkbox')pending+=arkRun(n.checked?'\u2612 ':'\u2610 ',inh);
+      else pending+=arkRun(n.value||'',inh);
+      continue;
+    }
+    if(tag==='textarea'){flush();var tv=n.value||'';if(tv.trim())out+=arkPara(arkRun(tv,inh),{after:60});continue;}
+    if(tag==='select'){pending+=arkRun(n.value||'',inh);continue;}
+    // block-level containers
+    var isBlock=(tag==='div'||tag==='p'||tag==='section'||tag==='header'||tag==='footer'||tag==='article'||tag==='li');
+    if(isBlock){
+      var hasBlockKids=false,ck=n.children||[];
+      for(var q=0;q<ck.length;q++){
+        var ctag=ck[q].tagName.toLowerCase();
+        if(ctag==='div'||ctag==='p'||ctag==='table'||ctag==='ul'||ctag==='ol'||ARK_HEAD[ctag]||ctag==='textarea'){hasBlockKids=true;break;}
+      }
+      flush();
+      var nst=arkStyleOf(n),ninh={};
+      for(var kk in inh)ninh[kk]=inh[kk];
+      if(nst.bold)ninh.bold=true;
+      if(nst.color)ninh.color=nst.color;
+      if(nst.sz)ninh.sz=nst.sz;
+      if(hasBlockKids){out+=arkBlocks(n,ctx,ninh);}
+      else{
+        var runs=arkRuns(n,ninh);
+        if(runs)out+=arkPara(runs,{after:60});
+      }
+      continue;
+    }
+    // inline fallback
+    pending+=arkRuns(n,inh);
+  }
+  flush();
+  return out;
+}
+
+/* ---- package ---- */
+function arkBuildDocx(bodyXml){
+  var docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+    +bodyXml
+    +'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>'
+    +'</w:body></w:document>';
+  var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+    +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>';
+  var rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+  var drels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  var styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    +'<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:rPrDefault>'
+    +'<w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>';
+  return arkZip([
+    {name:'[Content_Types].xml',data:arkEnc(ct)},
+    {name:'_rels/.rels',data:arkEnc(rels)},
+    {name:'word/_rels/document.xml.rels',data:arkEnc(drels)},
+    {name:'word/document.xml',data:arkEnc(docXml)},
+    {name:'word/styles.xml',data:arkEnc(styles)}
+  ]);
+}
+/* Convert an HTML string OR a DOM node into .docx bytes. */
+function arkHtmlToDocx(source,opts){
+  opts=opts||{};
+  var root;
+  if(typeof source==='string'){
+    var doc=new DOMParser().parseFromString(source,'text/html');
+    root=doc.body;
+  }else{root=source;}
+  var body=arkBlocks(root,{accent:opts.accent||null},{});
+  return arkBuildDocx(body);
+}
+function arkDownloadDocx(bytes,filename){
+  var blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+function arkSafeName(s){return String(s||'participant').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'')||'participant';}
+function arkToday(){return new Date().toISOString().slice(0,10);}
+
 
 /* ---------- Init ---------- */
 function seedRows(){
