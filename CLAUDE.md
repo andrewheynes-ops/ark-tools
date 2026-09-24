@@ -4,6 +4,9 @@ Never do the work yourself.
 Always dispatch a sub-agent.
 Don't always use Fable. Use Opus 5.5 for easier tasks.
 
+Exception: run one-step tasks directly (a single command, a quick
+lookup, or anything where I asked to see the raw output).
+
 # Model routing
 
 - Fable 5.1: architecture, hard bugs, code review, anything
