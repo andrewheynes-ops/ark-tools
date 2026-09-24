@@ -16,6 +16,6 @@ Don't always use Fable. Use Opus 5.5 for easier tasks.
 
 - One sub-agent per task. Plan first, then dispatch.
 - Run independent sub-agents in parallel, not one after another.
-- Read the report, never the files. If a sub-agent did the work,
-  trust its summary instead of re-reading everything it touched.
+- Trust sub-agent summaries for searches and lookups, but review
+  the diff for any change to a form or template.
 - Sub-agents return findings, not raw dumps.
