@@ -1,0 +1,4 @@
+# GitHub Pages (Jekyll) settings.
+# Keep Claude Code's instruction file off the published site.
+exclude:
+  - CLAUDE.md
