@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARK Participant Context Pack</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:14px;color:#222;background:#f5f5f5}
+.app{max-width:780px;margin:0 auto;padding:0 20px 60px}
+.draft-banner{position:sticky;top:0;z-index:50;background:#C2185B;color:#fff;font-weight:700;font-size:13px;text-align:center;padding:9px 14px;letter-spacing:0.02em;box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+.app-header{display:flex;align-items:center;gap:16px;margin:20px 0 24px;padding-bottom:16px;border-bottom:3px solid #C2185B}
+.app-header-text h1{font-size:18px;font-weight:700;color:#C2185B}
+.app-header-text p{font-size:13px;color:#666;margin-top:2px}
+.privacy-strip{background:#fff8e6;border:1px solid #e8d48a;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.privacy-strip p{flex:1 1 320px;line-height:1.45}
+#saveMsg{font-size:12px;color:#666}
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;padding:20px 24px;margin-bottom:16px}
+.section-label{font-size:11px;font-weight:700;color:#C2185B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px}
+h2.section-label{display:block}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+label,.legend{font-size:12px;color:#555;font-weight:600}
+input[type=text],input[type=date],select,textarea{padding:8px 10px;border:1px solid #ccc;border-radius:5px;font-size:13px;font-family:Arial,sans-serif;color:#222;background:#fff;width:100%}
+input[type=text],input[type=date],select{height:36px}
+input[readonly]{background:#f4f4f4;color:#555}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#C2185B;box-shadow:0 0 0 2px rgba(194,24,91,0.12)}
+button:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid #C2185B;outline-offset:2px}
+.hint{font-size:11px;color:#999;margin-bottom:12px}
+.msg{font-size:12px;min-height:1em}
+.msg.ok{color:#1c7a3d}
+.msg.warn{color:#8a5a00}
+.msg.err{color:#b3261e}
+fieldset{border:none}
+.check-row{display:flex;flex-wrap:wrap;gap:8px}
+.check-item{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e8e8e8;border-radius:5px;cursor:pointer;font-size:12px;font-weight:400;color:#333}
+.check-item:hover{background:#fef0f4}
+input[type=checkbox]{accent-color:#C2185B;width:15px;height:15px;flex-shrink:0}
+.goal-row{background:#fafafa;border:1px solid #e8e8e8;border-radius:6px;padding:14px 44px 14px 14px;margin-bottom:10px;position:relative}
+.row-grid{display:grid;gap:10px}
+.g3{grid-template-columns:140px 1fr 2fr}
+.g2{grid-template-columns:1fr 2fr}
+.g-gap{grid-template-columns:140px 130px 1fr}
+.g-pace{grid-template-columns:140px 1fr 1fr}
+.g-task{grid-template-columns:90px 1fr 1fr}
+.g1{grid-template-columns:1fr}
+.g-check{grid-template-columns:auto 1fr;align-items:center}
+.span-2{grid-column:span 2}
+.remove-btn{position:absolute;top:10px;right:10px;background:none;border:none;color:#bbb;font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+.remove-btn:hover,.remove-btn:focus-visible{color:#C2185B}
+.add-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;background:#fff;border:1px solid #C2185B;border-radius:5px;color:#C2185B;font-size:13px;font-weight:600;cursor:pointer;font-family:Arial,sans-serif;margin-top:4px}
+.add-btn:hover{background:#fef0f4}
+.row-actions{margin-top:10px}
+.pt-check{flex-direction:row;align-items:center;gap:8px;padding-top:4px}
+.counts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.b-matched{background:#d4edda;color:#155724}
+.b-gap{background:#fdecea;color:#8a1c14}
+.b-na{background:#eceff1;color:#455a64}
+.btn-generate{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:46px;background:#C2185B;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif;margin-top:4px}
+.btn-generate:hover{background:#A3154E}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btn-print{display:flex;align-items:center;gap:6px;padding:0 14px;height:34px;background:#fff;border:1px solid #ccc;border-radius:5px;font-size:13px;cursor:pointer;font-family:Arial,sans-serif;color:#222}
+.btn-print:hover{background:#f5f5f5}
+.btn-clear{padding:0 12px;height:32px;background:#fff;border:1px solid #ccc;border-radius:5px;font-size:13px;cursor:pointer;font-family:Arial,sans-serif}
+.btn-clear:hover{background:#fdecea;border-color:#b3261e;color:#b3261e}
+details.md-preview{margin-top:12px;font-size:13px}
+details.md-preview summary{cursor:pointer;color:#C2185B;font-weight:600}
+details.md-preview textarea{margin-top:8px;min-height:220px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.print-only{display:none}
+@media (max-width:520px){
+  .app{padding:0 16px 48px}
+  .card{padding:16px}
+  .field-grid,.g3,.g2,.g-gap,.g-pace,.g-task{grid-template-columns:1fr}
+  .span-2{grid-column:auto}
+}
+/* ===== Print ===== */
+@media print{
+  body{background:#fff;font-size:12px}
+  .app{max-width:none;padding:0}
+  .no-print,.remove-btn,.add-btn,.privacy-strip,.row-actions{display:none !important}
+  .print-only{display:block}
+  .draft-banner{position:static;box-shadow:none;background:#fff;color:#C2185B;border:2px solid #C2185B;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card{border:none;border-radius:0;padding:0;margin-bottom:18px}
+  .section-label{border-bottom:1px solid #C2185B;padding-bottom:4px;break-after:avoid}
+  .goal-row{background:none;border:none;border-bottom:1px solid #ddd;border-radius:0;padding:6px 0;break-inside:avoid}
+  input[type=text],input[type=date],select,textarea{border:none;background:none;padding:2px 0;height:auto;appearance:none;-webkit-appearance:none;resize:none;box-shadow:none}
+  textarea{min-height:0;overflow:visible}
+  input[readonly]{background:none}
+  .check-item{border:none;padding:2px 4px}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="draft-banner" role="note">AI DRAFT — S34: rewrite in your own voice before it reaches any record</div>
+<div class="app">
+
+<div class="app-header">
+<div class="app-header-text">
+<h1>Participant context pack</h1>
+<p>Participant context cycle — assemble the import-ready pack: changelog, Context Layer inserts, gap analysis, PACE checks, issues, task drafts and handoff.</p>
+</div>
+</div>
+
+<div class="privacy-strip no-print">
+<p><strong>Privacy:</strong> Data stays in this browser only. Nothing is uploaded or sent anywhere. The draft autosaves to this browser's local storage so you can come back to it &mdash; select <strong>Clear</strong> when you're done.</p>
+<span id="saveMsg" aria-live="polite"></span>
+<button type="button" class="btn-clear" onclick="clearPack()">Clear</button>
+</div>
+
+<!-- 0. Header -->
+<section class="card" aria-labelledby="h0">
+<h2 class="section-label" id="h0">0. Header</h2>
+<div class="field-grid">
+<div class="field"><label for="p-name">Participant name</label><input type="text" id="p-name" placeholder="e.g. Jane Smith" autocomplete="off"></div>
+<div class="field"><label for="p-ndis">NDIS number</label><input type="text" id="p-ndis" placeholder="e.g. 430 123 456" inputmode="numeric" autocomplete="off" aria-describedby="ndisMsg"><span id="ndisMsg" class="msg" aria-live="polite"></span></div>
+<div class="field"><label for="p-cycle">Cycle date</label><input type="date" id="p-cycle"></div>
+<div class="field"><span class="legend" id="win-legend">Window</span>
+<div class="field-grid" role="group" aria-labelledby="win-legend">
+<div class="field"><label for="p-from">From</label><input type="date" id="p-from"></div>
+<div class="field"><label for="p-to">To</label><input type="date" id="p-to"></div>
+</div>
+<span id="winMsg" class="msg err" aria-live="polite"></span>
+</div>
+<fieldset class="field field-full">
+<legend class="legend" style="margin-bottom:6px">Sources used</legend>
+<div class="check-row">
+<label class="check-item"><input type="checkbox" class="src" value="Astalty export"> Astalty export</label>
+<label class="check-item"><input type="checkbox" class="src" value="Outlook"> Outlook</label>
+<label class="check-item"><input type="checkbox" class="src" value="Notion Context Layer"> Notion Context Layer</label>
+<label class="check-item"><input type="checkbox" class="src" value="PACE"> PACE</label>
+<label class="check-item"><input type="checkbox" class="src" value="Other" id="src-other"> Other</label>
+</div>
+</fieldset>
+<div class="field field-full"><label for="p-src-other">Other source(s)</label><input type="text" id="p-src-other" placeholder="e.g. Fieldy transcript, provider report"></div>
+</div>
+</section>
+
+<!-- 1. Changelog -->
+<section class="card" aria-labelledby="h1">
+<h2 class="section-label" id="h1">1. Changelog</h2>
+<p class="hint">What changed for this participant during the window, and where you saw it.</p>
+<div id="rows-changelog"></div>
+<button type="button" class="add-btn" onclick="addRow('changelog',null,true)">+ Add changelog row</button>
+</section>
+
+<!-- 2. Context Layer inserts -->
+<section class="card" aria-labelledby="h2">
+<h2 class="section-label" id="h2">2. Context Layer inserts</h2>
+<p class="hint">Blocks ready to paste into the participant's Notion Context Layer page, one per target section.</p>
+<div id="rows-inserts"></div>
+<button type="button" class="add-btn" onclick="addRow('inserts',null,true)">+ Add insert block</button>
+</section>
+
+<!-- 3. Gap analysis -->
+<section class="card" aria-labelledby="h3">
+<h2 class="section-label" id="h3">3. Gap analysis</h2>
+<p class="hint">Each contact in the window against the task it maps to. Leave <em>Matched task</em> blank if none &mdash; it exports as &ldquo;&mdash;&rdquo;.</p>
+<div class="counts" id="gap-counts" aria-live="polite"></div>
+<div id="rows-gaps"></div>
+<button type="button" class="add-btn" onclick="addRow('gaps',null,true)">+ Add gap row</button>
+</section>
+
+<!-- 4. PACE verification -->
+<section class="card" aria-labelledby="h4">
+<h2 class="section-label" id="h4">4. PACE verification</h2>
+<p class="hint">Facts checked in PACE. Point-in-time facts must be re-checked on the day they're used.</p>
+<div id="rows-pace"></div>
+<button type="button" class="add-btn" onclick="addRow('pace',null,true)">+ Add PACE fact</button>
+</section>
+
+<!-- 5. Active issues -->
+<section class="card" aria-labelledby="h5">
+<h2 class="section-label" id="h5">5. Active issues</h2>
+<p class="hint">Structural findings &mdash; patterns, blockers or risks that sit above individual tasks.</p>
+<div id="rows-issues"></div>
+<button type="button" class="add-btn" onclick="addRow('issues',null,true)">+ Add finding</button>
+</section>
+
+<!-- 6. Task drafts -->
+<section class="card" aria-labelledby="h6">
+<h2 class="section-label" id="h6">6. Task drafts</h2>
+<p class="hint">Astalty task drafts. Participant and NDIS number fill from the header.</p>
+<div id="rows-tasks"></div>
+<button type="button" class="add-btn" onclick="addRow('tasks',null,true)">+ Add task draft</button>
+</section>
+
+<!-- 7. Handoff checklist -->
+<section class="card" aria-labelledby="h7">
+<h2 class="section-label" id="h7">7. Handoff checklist</h2>
+<div id="rows-checklist"></div>
+<button type="button" class="add-btn" onclick="addRow('checklist',null,true)">+ Add checklist item</button>
+</section>
+
+<!-- Export -->
+<section class="card no-print" aria-labelledby="hx">
+<h2 class="section-label" id="hx">Export</h2>
+<button type="button" class="btn-generate" onclick="copyMarkdown()">&#10697; Copy pack as Markdown</button>
+<div class="btn-row">
+<button type="button" class="btn-print" onclick="downloadMarkdown()">&#128196; Download .md</button>
+<button type="button" class="btn-print" onclick="downloadJson()">&#128190; Download JSON</button>
+<button type="button" class="btn-print" onclick="document.getElementById('jsonFile').click()">&#128194; Import JSON</button>
+<button type="button" class="btn-print" onclick="window.print()">&#128438; Print / save PDF</button>
+</div>
+<input type="file" id="jsonFile" accept="application/json,.json" class="visually-hidden" tabindex="-1" aria-hidden="true" onchange="importJson(this)">
+<p id="exportMsg" class="msg" aria-live="polite" style="margin-top:10px"></p>
+<details class="md-preview" id="mdDetails">
+<summary>Preview Markdown</summary>
+<label for="mdOut" class="visually-hidden">Markdown output</label>
+<textarea id="mdOut" readonly></textarea>
+</details>
+</section>
+
+</div>
+
+<script>
+/* ---------- Pack definition ---------- */
+const STORE_KEY='ark-context-pack-draft-v1';
+const BANNER='AI DRAFT — S34: rewrite in your own voice before it reaches any record';
+const CHANNELS=['Email','Phone','Meeting','SMS','Other'];
+const STATUSES=['Matched','Gap','Not-actionable'];
+const DEFAULT_CHECKLIST=[
+  'Andrew rewrote drafts in own voice',
+  'Context Layer updated in Notion',
+  'PACE facts re-checked on day of use',
+  'Astalty tasks created and confirmed on Task Board',
+  'First write done hand-in-hand'
+];
+
+/* Field: k=key, l=label, t=type (text|date|textarea|select|check|auto), o=options, d=default, full=span grid, ph=placeholder */
+const SECTIONS={
+  changelog:{title:'Changelog',grid:'g3',noun:'changelog row',fields:[
+    {k:'date',l:'Date',t:'date'},
+    {k:'source',l:'Source',t:'text',ph:'e.g. Astalty note, Outlook'},
+    {k:'change',l:'Change',t:'textarea',ph:'What changed'}
+  ]},
+  inserts:{title:'Context Layer inserts',grid:'g1',noun:'insert block',fields:[
+    {k:'target',l:'Target section',t:'text',ph:'e.g. Current supports'},
+    {k:'text',l:'Insert text',t:'textarea',ph:'Text to insert into this section'}
+  ]},
+  gaps:{title:'Gap analysis',grid:'g-gap',noun:'gap row',fields:[
+    {k:'date',l:'Date',t:'date'},
+    {k:'channel',l:'Channel',t:'select',o:CHANNELS,d:'Email'},
+    {k:'counterparty',l:'Counterparty',t:'text',ph:'e.g. OT provider, guardian'},
+    {k:'summary',l:'Summary',t:'textarea',full:true,ph:'What the contact was about'},
+    {k:'matched',l:'Matched task',t:'text',full:true,ph:'Blank if none (exports as —)'},
+    {k:'status',l:'Status',t:'select',o:STATUSES,d:'Gap'},
+    {k:'note',l:'Note',t:'text',span2:true}
+  ]},
+  pace:{title:'PACE verification',grid:'g-pace',noun:'PACE fact',fields:[
+    {k:'verified',l:'Verified on',t:'date'},
+    {k:'fact',l:'Fact',t:'text',ph:'e.g. Plan end date'},
+    {k:'value',l:'Value',t:'text'},
+    {k:'where',l:'Where verified',t:'text',span2:true,ph:'e.g. PACE › Plan › Budget'},
+    {k:'pit',l:'Point-in-time',t:'check',d:true}
+  ]},
+  issues:{title:'Active issues',grid:'g1',noun:'finding',fields:[
+    {k:'finding',l:'Finding',t:'textarea',ph:'Structural finding'}
+  ]},
+  tasks:{title:'Task drafts',grid:'g-task',noun:'task draft',fields:[
+    {k:'priority',l:'Priority',t:'select',o:['P1','P2','P3'],d:'P2'},
+    {k:'name',l:'Task name',t:'text',span2:true},
+    {k:'participant',l:'Participant',t:'auto',src:'p-name'},
+    {k:'ndis',l:'NDIS #',t:'auto',src:'p-ndis'},
+    {k:'item',l:'Support item',t:'text',d:'SC-L2'},
+    {k:'billable',l:'Billable',t:'select',o:['Y','N'],d:'Y'},
+    {k:'owner',l:'Owner',t:'text'},
+    {k:'due',l:'Due',t:'date'},
+    {k:'desc',l:'Short description',t:'textarea',full:true}
+  ]},
+  checklist:{title:'Handoff checklist',grid:'g-check',noun:'checklist item',fields:[
+    {k:'done',l:'Done',t:'check',d:false},
+    {k:'text',l:'Checklist item',t:'text'}
+  ]}
+};
+const ORDER=['changelog','inserts','gaps','pace','issues','tasks','checklist'];
+
+let uid=0;
+function $(id){return document.getElementById(id);}
+
+/* ---------- Dynamic rows ---------- */
+function makeControl(f,id,val){
+  let el;
+  if(f.t==='textarea'){el=document.createElement('textarea');}
+  else if(f.t==='select'){
+    el=document.createElement('select');
+    f.o.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;el.appendChild(op);});
+  }else{
+    el=document.createElement('input');
+    el.type=f.t==='date'?'date':f.t==='check'?'checkbox':'text';
+    if(f.t==='auto'){el.readOnly=true;el.tabIndex=-1;}
+  }
+  el.id=id;el.dataset.k=f.k;
+  if(f.ph)el.placeholder=f.ph;
+  const v=(val!==undefined&&val!==null)?val:(f.t==='auto'?$(f.src).value:f.d);
+  if(f.t==='check')el.checked=!!v;
+  else if(v!==undefined)el.value=v;
+  return el;
+}
+
+function addRow(sec,vals,focus){
+  const S=SECTIONS[sec];vals=vals||{};
+  const row=document.createElement('div');
+  row.className='goal-row';row.dataset.sec=sec;
+  const grid=document.createElement('div');
+  grid.className='row-grid '+S.grid;
+  S.fields.forEach(f=>{
+    const id='f'+(++uid);
+    const wrap=document.createElement('div');
+    wrap.className='field'+(f.t==='check'&&sec==='pace'?' pt-check':'');
+    if(f.full)wrap.className+=' field-full';
+    if(f.span2)wrap.className+=' span-2';
+    const lab=document.createElement('label');lab.htmlFor=id;lab.textContent=f.l;
+    const ctl=makeControl(f,id,vals[f.k]);
+    if(f.t==='check'){
+      if(sec==='checklist'){lab.className='visually-hidden';}
+      wrap.appendChild(ctl);wrap.appendChild(lab);
+    }else{wrap.appendChild(lab);wrap.appendChild(ctl);}
+    grid.appendChild(wrap);
+  });
+  const rm=document.createElement('button');
+  rm.type='button';rm.className='remove-btn';rm.innerHTML='&#215;';
+  rm.title='Remove';rm.setAttribute('aria-label','Remove '+S.noun);
+  rm.onclick=function(){
+    const next=row.nextElementSibling||row.previousElementSibling;
+    row.remove();afterChange(sec);
+    const target=next?next.querySelector('input:not([readonly]),select,textarea'):null;
+    (target||$('h'+(ORDER.indexOf(sec)+1)).parentNode.querySelector(':scope > .add-btn')).focus();
+  };
+  row.appendChild(rm);row.appendChild(grid);
+  if(sec==='gaps'){
+    const a=document.createElement('div');a.className='row-actions';
+    const b=document.createElement('button');b.type='button';b.className='add-btn';
+    b.textContent='+ Create task draft from gap';
+    b.onclick=function(){taskFromGap(row);};
+    a.appendChild(b);row.appendChild(a);
+  }
+  $('rows-'+sec).appendChild(row);
+  afterChange(sec);
+  if(focus){const c=row.querySelector('input:not([readonly]),select,textarea');if(c)c.focus();}
+  return row;
+}
+
+function readRow(row){
+  const o={};
+  row.querySelectorAll('[data-k]').forEach(el=>{o[el.dataset.k]=el.type==='checkbox'?el.checked:el.value;});
+  return o;
+}
+
+function taskFromGap(gapRow){
+  const g=readRow(gapRow);
+  const who=g.counterparty.trim();
+  const sum=g.summary.trim().replace(/\s+/g,' ');
+  const name='Follow up'+(who?' '+who:'')+(sum?' — '+(sum.length>60?sum.slice(0,57)+'…':sum):'');
+  const desc=[
+    'From gap analysis'+(g.date?' ('+fmtDate(g.date)+', '+g.channel+')':' ('+g.channel+')')+'.',
+    sum,
+    g.note.trim()?'Note: '+g.note.trim():''
+  ].filter(Boolean).join(' ');
+  const row=addRow('tasks',{priority:'P2',name:name,desc:desc});
+  row.scrollIntoView({behavior:'smooth',block:'center'});
+  const n=row.querySelector('[data-k="name"]');if(n)n.focus({preventScroll:true});
+  flash('Task draft created from gap — review priority, owner and due date.','ok');
+}
+
+/* ---------- Derived UI ---------- */
+function afterChange(sec){
+  if(!sec||sec==='gaps')updateCounts();
+  scheduleSave();
+}
+function updateCounts(){
+  const c={Matched:0,Gap:0,'Not-actionable':0};
+  [...$('rows-gaps').children].map(readRow).filter(r=>!isBlank('gaps',r)).forEach(r=>{c[r.status]=(c[r.status]||0)+1;});
+  $('gap-counts').innerHTML=
+    '<span class="badge b-matched">Matched: '+c.Matched+'</span>'+
+    '<span class="badge b-gap">Gap: '+c.Gap+'</span>'+
+    '<span class="badge b-na">Not-actionable: '+c['Not-actionable']+'</span>';
+}
+function syncAuto(){
+  document.querySelectorAll('#rows-tasks [data-k="participant"]').forEach(e=>{e.value=$('p-name').value;});
+  document.querySelectorAll('#rows-tasks [data-k="ndis"]').forEach(e=>{e.value=$('p-ndis').value;});
+}
+function checkNdis(){
+  const raw=$('p-ndis').value.trim();const m=$('ndisMsg');
+  const digits=raw.replace(/[\s-]/g,'');
+  m.className='msg';m.textContent='';$('p-ndis').removeAttribute('aria-invalid');
+  if(!raw)return;
+  if(!/^\d{9}$/.test(digits)){m.className='msg err';m.textContent='NDIS number must be 9 digits.';$('p-ndis').setAttribute('aria-invalid','true');}
+  else if(!digits.startsWith('43')){m.className='msg warn';m.textContent='Check: NDIS numbers usually start with 43.';}
+  else{m.className='msg ok';m.textContent='✓ 9 digits';}
+}
+function checkWindow(){
+  const f=$('p-from').value,t=$('p-to').value;
+  $('winMsg').textContent=(f&&t&&f>t)?'Window "from" is after "to".':'';
+}
+
+/* ---------- Collect / apply ---------- */
+function collect(){
+  const d={
+    header:{
+      name:$('p-name').value,ndis:$('p-ndis').value,cycle:$('p-cycle').value,
+      from:$('p-from').value,to:$('p-to').value,
+      sources:[...document.querySelectorAll('.src:checked')].map(c=>c.value),
+      otherSource:$('p-src-other').value
+    }
+  };
+  ORDER.forEach(sec=>{d[sec]=[...$('rows-'+sec).children].map(readRow);});
+  return d;
+}
+function applyData(d){
+  d=d||{};const h=d.header||{};
+  $('p-name').value=h.name||'';$('p-ndis').value=h.ndis||'';$('p-cycle').value=h.cycle||'';
+  $('p-from').value=h.from||'';$('p-to').value=h.to||'';$('p-src-other').value=h.otherSource||'';
+  const srcs=Array.isArray(h.sources)?h.sources:[];
+  document.querySelectorAll('.src').forEach(c=>{c.checked=srcs.indexOf(c.value)>-1;});
+  ORDER.forEach(sec=>{
+    $('rows-'+sec).innerHTML='';
+    const rows=Array.isArray(d[sec])?d[sec]:null;
+    if(rows&&rows.length)rows.forEach(r=>addRow(sec,r));
+    else seedSection(sec);
+  });
+  syncAuto();checkNdis();checkWindow();updateCounts();
+}
+function seedSection(sec){
+  if(sec==='checklist')DEFAULT_CHECKLIST.forEach(t=>addRow('checklist',{text:t,done:false}));
+  else addRow(sec);
+}
+function blankPack(){applyData({});}
+
+/* ---------- Autosave (this browser only) ---------- */
+let saveTimer=null,ready=false;
+function scheduleSave(){if(!ready)return;clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,300);}
+function saveDraft(){
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify({savedAt:new Date().toISOString(),data:collect()}));
+    $('saveMsg').textContent='Draft autosaved in this browser at '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){$('saveMsg').textContent='Autosave unavailable in this browser — use Download JSON to keep your work.';}
+}
+function loadDraft(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(!raw)return false;
+    const o=JSON.parse(raw);
+    applyData(o.data);
+    $('saveMsg').textContent='Restored draft saved '+new Date(o.savedAt).toLocaleString('en-AU');
+    return true;
+  }catch(e){return false;}
+}
+function clearPack(){
+  if(!confirm('Clear the whole pack and delete the autosaved draft from this browser? This cannot be undone.'))return;
+  clearTimeout(saveTimer);
+  try{localStorage.removeItem(STORE_KEY);}catch(e){}
+  ready=false;blankPack();ready=true;
+  $('saveMsg').textContent='Cleared — nothing stored in this browser.';
+  $('mdOut').value='';
+  $('p-name').focus();
+}
+
+/* ---------- Markdown ---------- */
+function fmtDate(v){if(!v)return'';const d=new Date(v+'T00:00:00');return d.toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function cell(s){return String(s==null?'':s).trim().replace(/\|/g,'\\|').replace(/\r?\n/g,'<br>');}
+function isBlank(sec,r){
+  return SECTIONS[sec].fields.every(f=>{
+    if(f.t==='auto'||f.t==='check'||f.t==='select'||f.d!==undefined&&r[f.k]===f.d)return true;
+    return !String(r[f.k]||'').trim();
+  });
+}
+function mdTable(heads,rows){
+  if(!rows.length)return '_None recorded._\n';
+  return '| '+heads.join(' | ')+' |\n| '+heads.map(()=>'---').join(' | ')+' |\n'+
+    rows.map(r=>'| '+r.map(cell).join(' | ')+' |').join('\n')+'\n';
+}
+function buildMarkdown(){
+  const d=collect(),h=d.header;
+  const rows=sec=>d[sec].filter(r=>!isBlank(sec,r));
+  const srcs=h.sources.filter(s=>s!=='Other');
+  if(h.sources.indexOf('Other')>-1||h.otherSource.trim())srcs.push('Other'+(h.otherSource.trim()?': '+h.otherSource.trim():''));
+  let md='> **'+BANNER+'**\n\n';
+  md+='# Participant context pack'+(h.name.trim()?' — '+h.name.trim():'')+'\n\n';
+  md+='## 0. Header\n\n';
+  md+='- **Participant:** '+(h.name.trim()||'—')+'\n';
+  md+='- **NDIS #:** '+(h.ndis.trim()||'—')+'\n';
+  md+='- **Cycle date:** '+(fmtDate(h.cycle)||'—')+'\n';
+  md+='- **Window:** '+(fmtDate(h.from)||'—')+' to '+(fmtDate(h.to)||'—')+'\n';
+  md+='- **Sources used:** '+(srcs.length?srcs.join(', '):'—')+'\n\n';
+
+  md+='## 1. Changelog\n\n'+mdTable(['Date','Source','Change'],rows('changelog').map(r=>[fmtDate(r.date),r.source,r.change]))+'\n';
+
+  md+='## 2. Context Layer inserts\n\n';
+  const ins=rows('inserts');
+  md+=ins.length?ins.map(r=>'### '+(r.target.trim()||'(target section not set)')+'\n\n'+r.text.trim()+'\n').join('\n'):'_None recorded._\n';
+  md+='\n';
+
+  const gaps=rows('gaps');
+  const c={Matched:0,Gap:0,'Not-actionable':0};gaps.forEach(r=>{c[r.status]=(c[r.status]||0)+1;});
+  md+='## 3. Gap analysis\n\n**Matched:** '+c.Matched+' · **Gap:** '+c.Gap+' · **Not-actionable:** '+c['Not-actionable']+'\n\n';
+  md+=mdTable(['Date','Channel','Counterparty','Summary','Matched task','Status','Note'],
+    gaps.map(r=>[fmtDate(r.date),r.channel,r.counterparty,r.summary,r.matched.trim()||'—',r.status,r.note]))+'\n';
+
+  md+='## 4. PACE verification\n\n'+mdTable(['Verified on','Fact','Value','Where verified','Point-in-time'],
+    rows('pace').map(r=>[fmtDate(r.verified),r.fact,r.value,r.where,r.pit?'Yes':'No']))+'\n';
+
+  const iss=rows('issues');
+  md+='## 5. Active issues\n\n'+(iss.length?iss.map(r=>'- '+r.finding.trim().replace(/\r?\n/g,'\n  ')).join('\n')+'\n':'_None recorded._\n')+'\n';
+
+  md+='## 6. Task drafts\n\n'+mdTable(['Priority','Task name','Participant','NDIS #','Support item','Billable','Owner','Due','Short description'],
+    rows('tasks').map(r=>[r.priority,r.name,r.participant,r.ndis,r.item,r.billable,r.owner,fmtDate(r.due),r.desc]))+'\n';
+
+  const cl=d.checklist.filter(r=>String(r.text||'').trim());
+  md+='## 7. Handoff checklist\n\n'+(cl.length?cl.map(r=>'- ['+(r.done?'x':' ')+'] '+r.text.trim()).join('\n')+'\n':'_None recorded._\n');
+  return md;
+}
+
+/* ---------- Exports (all local — nothing leaves the page) ---------- */
+function flash(t,cls){
+  const m=$('exportMsg');m.className='msg '+(cls||'ok');m.textContent=t;
+  setTimeout(()=>{if(m.textContent===t)m.textContent='';},5000);
+}
+function showPreview(md){$('mdOut').value=md;}
+function copyMarkdown(){
+  const md=buildMarkdown();showPreview(md);
+  const fallback=()=>{
+    try{
+      const t=$('mdOut');$('mdDetails').open=true;t.focus();t.select();
+      const ok=document.execCommand('copy');
+      flash(ok?'Markdown copied. Rewrite in your own voice before it reaches any record.':'Copy blocked — Markdown is selected in the preview; press Ctrl/Cmd+C.',ok?'ok':'warn');
+    }catch(e){flash('Copy blocked — use the preview below.','warn');}
+  };
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(md).then(()=>flash('Markdown copied. Rewrite in your own voice before it reaches any record.'),fallback);
+  }else fallback();
+}
+function safeName(s){return String(s||'participant').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'')||'participant';}
+function today(){return new Date().toISOString().slice(0,10);}
+function fileBase(){return 'ARK-Context-Pack-'+safeName($('p-name').value)+'-'+($('p-cycle').value||today());}
+function downloadBlob(text,type,filename){
+  const blob=new Blob([text],{type:type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function downloadMarkdown(){
+  const md=buildMarkdown();showPreview(md);
+  downloadBlob(md,'text/markdown;charset=utf-8',fileBase()+'.md');
+  flash('Markdown downloaded.');
+}
+function downloadJson(){
+  const payload={schema:'ark-context-pack',version:1,savedAt:new Date().toISOString(),data:collect()};
+  downloadBlob(JSON.stringify(payload,null,2),'application/json',fileBase()+'.json');
+  flash('JSON downloaded — import it here later to resume this pack.');
+}
+function importJson(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=function(){
+    try{
+      const o=JSON.parse(r.result);
+      if(!o||o.schema!=='ark-context-pack'||!o.data)throw new Error('Not an ARK context pack file.');
+      ready=false;applyData(o.data);ready=true;saveDraft();
+      flash('Pack imported from '+file.name+'. Review before use.');
+    }catch(e){flash('Import failed: '+e.message,'err');}
+    input.value='';
+  };
+  r.onerror=function(){flash('Could not read that file.','err');input.value='';};
+  r.readAsText(file);
+}
+
+/* ---------- Print: expand textareas so nothing is clipped ---------- */
+function fitTextareas(){document.querySelectorAll('textarea').forEach(t=>{t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px';});}
+function unfitTextareas(){document.querySelectorAll('textarea').forEach(t=>{t.style.height='';});}
+window.addEventListener('beforeprint',fitTextareas);
+window.addEventListener('afterprint',unfitTextareas);
+
+/* ---------- Wiring ---------- */
+document.addEventListener('input',e=>{
+  if(e.target.id==='p-name'||e.target.id==='p-ndis')syncAuto();
+  if(e.target.id==='p-ndis')checkNdis();
+  if(e.target.id==='p-src-other'&&e.target.value.trim())$('src-other').checked=true;
+  if(e.target.closest&&e.target.closest('#rows-gaps'))updateCounts();
+  if(e.target.id!=='mdOut'&&e.target.id!=='jsonFile')scheduleSave();
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='p-from'||e.target.id==='p-to')checkWindow();
+  if(e.target.closest&&e.target.closest('#rows-gaps'))updateCounts();
+  if(e.target.id!=='jsonFile')scheduleSave();
+});
+
+if(!loadDraft())blankPack();
+ready=true;
+</script>
+</body>
+</html>
