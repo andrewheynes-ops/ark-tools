@@ -12,13 +12,14 @@ Use this exact structure. Keep headings, section numbers, order and table column
 - **NDIS #:** <9 digits> (identity confirmed against: <source / Notion / Astalty / PACE>)
 - **Cycle date:** <DD/MM/YYYY>
 - **Window:** <from DD/MM/YYYY (Context Layer compile marker)> – <to DD/MM/YYYY>
-- **Sources used:** <e.g. Astalty notes export (n parts, n pages); Notion Context Layer (marker "notes #1–#N, to DD/MM/YYYY"); Outlook mail + calendar; PACE Route A/B — or "handoff" per stage>
+- **Sources used:** <e.g. Astalty notes export (n parts, n pages); Astalty tasks export (NDIS column: yes/no); Notion Context Layer (marker "notes #1–#N, to DD/MM/YYYY"); Outlook mail + calendar; portal named explicitly — "PACE my NDIS provider portal" or "myplace provider portal › View Plan" (live / Andrew's screenshots) — or "handoff" per stage>
+- **Channels not searched:** <e.g. Teams, SMS, phone, Fieldy>
 
 ## 1. Changelog
 
 | Date | Source | Change |
 |---|---|---|
-| <DD/MM/YYYY> | <Astalty note #n / email / PACE / Notion> | <exact change to make on the page, incl. compile-marker bump #old -> #new> |
+| <DD/MM/YYYY> | <Astalty note #n / email / PACE / Notion> | <exact change to make on the page, incl. compile-marker bump #old -> #new as "#1–#M (to DD/MM/YYYY HH:MM)"; flag any marker drift; tag delta notes "already reflected" / "new"> |
 
 ## 2. Context Layer insert blocks
 
@@ -34,11 +35,16 @@ Use this exact structure. Keep headings, section numbers, order and table column
 
 Gaps: <n> · Matched: <n> · Not-actionable: <n>
 
+**Reverse list** (logged tasks/notes with no Outlook trace): <items or "None">
+**Pre-window** (relevant comms before the window): <items or "None">
+
 ## 4. PACE Verification
 
 | Verified-on date | Fact | Value | Where verified | Point-in-time flag |
 |---|---|---|---|---|
-| <DD/MM/YYYY or UNVERIFIED> | <e.g. IDL available balance> | <value, exact cents> | <PACE Route A/B > tab> | <Yes — point-in-time / n.a.> |
+| <DD/MM/YYYY or UNVERIFIED> | <e.g. IDL available balance; or a Stage 1–2 fact with verdict CONFIRMED / CONTRADICTED / NOT VISIBLE> | <value, exact cents> | <portal used — "PACE my NDIS provider portal" or "myplace provider portal › View Plan" — > tab; "(screenshot)" if from Andrew's screenshots> | <Yes — point-in-time / n.a.> |
+
+Heading stays "PACE Verification" even when the source is myplace. **NOT VISIBLE on portal:** <e.g. diagnosis, funding periods, service bookings, FCA outcomes — these stay UNVERIFIED>
 
 ## 5. Active Issues
 
@@ -60,3 +66,4 @@ Gaps: <n> · Matched: <n> · Not-actionable: <n>
 - [ ] Stage 6: first task created hand-in-hand (screenshot approved), rest created and confirmed on Task Board
 - [ ] Andrew rewrites §1–§6 wording in his own voice before it lands (S34)
 - [ ] <any handoff item: e.g. "Verify X in PACE Route B (no Chrome this session)">
+- [ ] <reverse-list / pre-window / NOT VISIBLE items — one line each (the JSON import has no section for them)>
