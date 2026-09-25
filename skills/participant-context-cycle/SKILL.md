@@ -70,7 +70,7 @@ Cloud-session pattern that worked (first live run): Stages 2 and 3 in parallel; 
 - STOP: owner/SC of record unclear (Andrew vs Faye) — ask.
 - Exit: every Gap in §3 maps to a §6 task or is explicitly declined in §3 note; Andrew has reacted to §6.
 
-**6. Astalty task setup — [[astalty-followup-task]].** On explicit go-ahead only. First task hand-in-hand (screenshot the filled form for his OK), then the rest; confirm each on the Task Board and give a verified summary.
+**6. Astalty task setup — [[astalty-followup-task]].** On explicit go-ahead only. First task hand-in-hand (screenshot the filled form for his OK), then the rest; confirm each on the Task Board and give a verified summary. Field mapping: §6 "Due" goes in the single date picker (labelled "Start time"); there is no Due or Period field. Paste the Stage 6 outcome block back into §7 of the pack (identity check, tasks created/confirmed, billable flags, existing open tasks left untouched, S34 rewrite still owed).
 - STOP: no go-ahead; Astalty NDIS # mismatch; first-task screenshot not yet approved.
 - Exit: §7 records each task as created + confirmed (or handed off).
 
