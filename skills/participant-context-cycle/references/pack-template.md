@@ -56,6 +56,8 @@ Heading stays "PACE Verification" even when the source is myplace. **NOT VISIBLE
 |---|---|---|---|---|---|---|---|---|
 | <P1/P2/P3> | <P1 – Theme-Topic> | <Surname, First> | <NDIS #> | SC-L2 | <Y/N> | <Andrew Heynes / SC of record> | <DD/MM/YYYY> | <what/why, one or two lines> |
 
+Astalty Create Task has one date field (the picker labelled "Start time") and no Due date or Period field: "Due" maps to it. Duration is left at 0; Completed unchecked; no documents unless §7 says otherwise.
+
 ## 7. Handoff / next steps
 
 - [ ] Pre-flight: identity confirmed on NDIS # (<how>)
